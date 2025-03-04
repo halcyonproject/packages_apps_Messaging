@@ -72,6 +72,9 @@ public class BugleActionBarActivity extends AppCompatActivity implements ImeUtil
         if (LogUtil.isLoggable(LogUtil.BUGLE_TAG, LogUtil.VERBOSE)) {
             LogUtil.v(LogUtil.BUGLE_TAG, this.getLocalClassName() + ".onCreate");
         }
+
+        getWindow().setStatusBarColor(getResources().getColor(R.color.action_bar_background_color,
+                getTheme()));
     }
 
     @Override
