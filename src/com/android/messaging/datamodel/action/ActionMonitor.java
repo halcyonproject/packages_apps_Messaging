@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
- * Copyright (C) 2024 The LineageOS Project
+ * Copyright (C) 2024-2025 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import com.android.messaging.util.ThreadUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TimeZone;
 
 /**
@@ -196,7 +197,7 @@ public class ActionMonitor {
      * Return flag to indicate if action is complete
      */
     public boolean isComplete() {
-        boolean complete = false;
+        boolean complete;
         synchronized (mLock) {
             complete = (mState == STATE_COMPLETE);
         }
@@ -272,12 +273,11 @@ public class ActionMonitor {
             monitor.updateState(action, expectedOldState, newState);
             newMonitorState = monitor.mState;
         }
-        if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-            final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-            df.setTimeZone(TimeZone.getTimeZone("UTC"));
-            LogUtil.v(TAG, "Operation-" + action.actionKey + ": @" + df.format(new Date())
-                    + "UTC State = " + oldMonitorState + " - " + newMonitorState);
-        }
+        final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS",
+                Locale.getDefault());
+        df.setTimeZone(TimeZone.getTimeZone("UTC"));
+        LogUtil.v(TAG, "Operation-" + action.actionKey + ": @" + df.format(new Date())
+                + "UTC State = " + oldMonitorState + " - " + newMonitorState);
     }
 
     /**
@@ -291,7 +291,7 @@ public class ActionMonitor {
      */
     private void complete(final Action action, final int expectedOldState, final Object result,
                           final boolean succeeded) {
-        ActionCompletedListener completedListener = null;
+        ActionCompletedListener completedListener;
         synchronized (mLock) {
             setState(action, expectedOldState, STATE_COMPLETE);
             completedListener = mCompletedListener;
@@ -340,12 +340,11 @@ public class ActionMonitor {
             monitor.complete(action, expectedOldState, result, succeeded);
             unregisterActionMonitorIfComplete(action.actionKey, monitor);
         }
-        if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-            final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-            df.setTimeZone(TimeZone.getTimeZone("UTC"));
-            LogUtil.v(TAG, "Operation-" + action.actionKey + ": @" + df.format(new Date())
-                    + "UTC State = " + oldMonitorState + " - " + STATE_COMPLETE);
-        }
+        final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS",
+                Locale.getDefault());
+        df.setTimeZone(TimeZone.getTimeZone("UTC"));
+        LogUtil.v(TAG, "Operation-" + action.actionKey + ": @" + df.format(new Date())
+                + "UTC State = " + oldMonitorState + " - " + STATE_COMPLETE);
     }
 
     /**
@@ -357,7 +356,7 @@ public class ActionMonitor {
      */
     final void executed(final Action action,
             final int expectedOldState, final boolean hasBackgroundActions, final Object result) {
-        ActionExecutedListener executedListener = null;
+        ActionExecutedListener executedListener;
         synchronized (mLock) {
             if (hasBackgroundActions) {
                 setState(action, expectedOldState, STATE_BACKGROUND_ACTIONS_QUEUED);
@@ -398,12 +397,11 @@ public class ActionMonitor {
             oldMonitorState = monitor.mState;
             monitor.executed(action, expectedOldState, hasBackgroundActions, result);
         }
-        if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-            final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-            df.setTimeZone(TimeZone.getTimeZone("UTC"));
-            LogUtil.v(TAG, "Operation-" + action.actionKey + ": @" + df.format(new Date())
-                    + "UTC State = " + oldMonitorState + " - EXECUTED");
-        }
+        final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS",
+                Locale.getDefault());
+        df.setTimeZone(TimeZone.getTimeZone("UTC"));
+        LogUtil.v(TAG, "Operation-" + action.actionKey + ": @" + df.format(new Date())
+                + "UTC State = " + oldMonitorState + " - EXECUTED");
     }
 
     /**
@@ -432,7 +430,7 @@ public class ActionMonitor {
      * Find monitor associated with particular action
      */
     private static ActionMonitor lookupActionMonitor(final String actionKey) {
-        ActionMonitor monitor = null;
+        ActionMonitor monitor;
         synchronized (sActionMonitors) {
             monitor = sActionMonitors.get(actionKey);
         }

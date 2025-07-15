@@ -24,6 +24,7 @@ import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.support.v7.mms.pdu.ContentType;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
@@ -39,14 +40,13 @@ import com.android.messaging.datamodel.media.ImageRequest;
 import com.android.messaging.sms.MmsUtils;
 import com.android.messaging.util.Assert;
 import com.android.messaging.util.Assert.DoesNotRunOnMainThread;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.GifTranscoder;
 import com.android.messaging.util.ImageUtils;
 import com.android.messaging.util.LogUtil;
-import com.android.messaging.util.SafeAsyncTask;
 import com.android.messaging.util.UriUtil;
 
 import java.util.Arrays;
+import java.util.concurrent.Executors;
 
 /**
  * Represents a single message part. Messages consist of one or more parts which may contain
@@ -444,7 +444,7 @@ public class MessagePartData implements Parcelable {
     public void destroyAsync() {
         final Uri contentUri = shouldDestroy();
         if (contentUri != null) {
-            SafeAsyncTask.executeOnThreadPool(() ->
+            Executors.newSingleThreadExecutor().execute(() ->
                     Factory.get().getApplicationContext().getContentResolver().delete(
                             contentUri, null, null));
         }

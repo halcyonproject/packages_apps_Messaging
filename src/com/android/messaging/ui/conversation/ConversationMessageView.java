@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
- * Copyright (C) 2024 The LineageOS Project
+ * Copyright (C) 2024-2025 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import android.database.Cursor;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import androidx.annotation.Nullable;
+import android.support.v7.mms.pdu.ContentType;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
@@ -40,6 +40,8 @@ import android.widget.FrameLayout;
 import android.widget.ImageView.ScaleType;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
 
 import com.android.messaging.R;
 import com.android.messaging.datamodel.DataModel;
@@ -64,7 +66,6 @@ import com.android.messaging.ui.VideoThumbnailView;
 import com.android.messaging.util.AccessibilityUtil;
 import com.android.messaging.util.Assert;
 import com.android.messaging.util.AvatarUriUtil;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.ImageUtils;
 import com.android.messaging.util.LinkifyHelper;
 import com.android.messaging.util.OsUtil;
@@ -123,37 +124,37 @@ public class ConversationMessageView extends FrameLayout implements View.OnClick
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
-        mContactIconView = (ContactIconView) findViewById(R.id.conversation_icon);
+        mContactIconView = findViewById(R.id.conversation_icon);
         mContactIconView.setOnLongClickListener(view -> {
             ConversationMessageView.this.performLongClick();
             return true;
         });
 
-        mMessageAttachmentsView = (LinearLayout) findViewById(R.id.message_attachments);
-        mMultiAttachmentView = (MultiAttachmentLayout) findViewById(R.id.multiple_attachments);
+        mMessageAttachmentsView = findViewById(R.id.message_attachments);
+        mMultiAttachmentView = findViewById(R.id.multiple_attachments);
         mMultiAttachmentView.setOnAttachmentClickListener(this);
 
-        mMessageImageView = (AsyncImageView) findViewById(R.id.message_image);
+        mMessageImageView = findViewById(R.id.message_image);
         mMessageImageView.setOnClickListener(this);
         mMessageImageView.setOnLongClickListener(this);
 
-        mMessageTextView = (TextView) findViewById(R.id.message_text);
+        mMessageTextView = findViewById(R.id.message_text);
         mMessageTextView.setOnClickListener(this);
         IgnoreLinkLongClickHelper.ignoreLinkLongClick(mMessageTextView, this);
 
-        mStatusTextView = (TextView) findViewById(R.id.message_status);
-        mTitleTextView = (TextView) findViewById(R.id.message_title);
-        mMmsInfoTextView = (TextView) findViewById(R.id.mms_info);
-        mMessageTitleLayout = (LinearLayout) findViewById(R.id.message_title_layout);
-        mSenderNameTextView = (TextView) findViewById(R.id.message_sender_name);
-        mMessageBubble = (ConversationMessageBubbleView) findViewById(R.id.message_content);
+        mStatusTextView = findViewById(R.id.message_status);
+        mTitleTextView = findViewById(R.id.message_title);
+        mMmsInfoTextView = findViewById(R.id.mms_info);
+        mMessageTitleLayout = findViewById(R.id.message_title_layout);
+        mSenderNameTextView = findViewById(R.id.message_sender_name);
+        mMessageBubble = findViewById(R.id.message_content);
         mSubjectView = findViewById(R.id.subject_container);
-        mSubjectLabel = (TextView) mSubjectView.findViewById(R.id.subject_label);
-        mSubjectText = (TextView) mSubjectView.findViewById(R.id.subject_text);
+        mSubjectLabel = mSubjectView.findViewById(R.id.subject_label);
+        mSubjectText = mSubjectView.findViewById(R.id.subject_text);
         mDeliveredBadge = findViewById(R.id.smsDeliveredBadge);
-        mMessageMetadataView = (ViewGroup) findViewById(R.id.message_metadata);
-        mMessageTextAndInfoView = (ViewGroup) findViewById(R.id.message_text_and_info);
-        mSimNameView = (TextView) findViewById(R.id.sim_name);
+        mMessageMetadataView = findViewById(R.id.message_metadata);
+        mMessageTextAndInfoView = findViewById(R.id.message_text_and_info);
+        mSimNameView = findViewById(R.id.sim_name);
     }
 
     @Override
@@ -174,7 +175,7 @@ public class ConversationMessageView extends FrameLayout implements View.OnClick
         // the max leftover space because we want the message bubble to extend no further than the
         // starting position of the message bubble in the opposite direction.
         final int maxLeftoverSpace = horizontalSpace - mContactIconView.getMeasuredWidth() * 2
-                - arrowWidth - getPaddingLeft() - getPaddingRight();
+                - arrowWidth - getPaddingStart() - getPaddingEnd();
         final int messageContentWidthMeasureSpec = MeasureSpec.makeMeasureSpec(maxLeftoverSpace,
                 MeasureSpec.AT_MOST);
 
@@ -193,7 +194,7 @@ public class ConversationMessageView extends FrameLayout implements View.OnClick
         final int iconWidth = mContactIconView.getMeasuredWidth();
         final int iconHeight = mContactIconView.getMeasuredHeight();
         final int iconTop = getPaddingTop();
-        final int contentWidth = (right -left) - iconWidth - getPaddingLeft() - getPaddingRight();
+        final int contentWidth = (right -left) - iconWidth - getPaddingStart() - getPaddingEnd();
         final int contentHeight = mMessageBubble.getMeasuredHeight();
         final int contentTop = iconTop;
 
@@ -201,18 +202,18 @@ public class ConversationMessageView extends FrameLayout implements View.OnClick
         final int contentLeft;
         if (mData.getIsIncoming()) {
             if (isRtl) {
-                iconLeft = (right - left) - getPaddingRight() - iconWidth;
+                iconLeft = (right - left) - getPaddingEnd() - iconWidth;
                 contentLeft = iconLeft - contentWidth;
             } else {
-                iconLeft = getPaddingLeft();
+                iconLeft = getPaddingStart();
                 contentLeft = iconLeft + iconWidth;
             }
         } else {
             if (isRtl) {
-                iconLeft = getPaddingLeft();
+                iconLeft = getPaddingStart();
                 contentLeft = iconLeft + iconWidth;
             } else {
-                iconLeft = (right - left) - getPaddingRight() - iconWidth;
+                iconLeft = (right - left) - getPaddingEnd() - iconWidth;
                 contentLeft = iconLeft - contentWidth;
             }
         }
@@ -754,7 +755,7 @@ public class ConversationMessageView extends FrameLayout implements View.OnClick
         }
 
         // Update the message row and message bubble views
-        setPadding(getPaddingLeft(), messageTopPadding, getPaddingRight(), 0);
+        setPadding(getPaddingStart(), messageTopPadding, getPaddingEnd(), 0);
         mMessageBubble.setGravity(gravity);
         updateMessageAttachmentsAppearance(gravity);
 
@@ -881,8 +882,8 @@ public class ConversationMessageView extends FrameLayout implements View.OnClick
 
     private void updateTextAppearance() {
         int messageColorResId;
-        int statusColorResId = -1;
-        int infoColorResId = -1;
+        int statusColorResId;
+        int infoColorResId;
         int timestampColorResId;
         int subjectLabelColorResId;
         if (isSelected()) {

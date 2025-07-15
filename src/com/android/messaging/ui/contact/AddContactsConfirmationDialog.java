@@ -46,7 +46,7 @@ public class AddContactsConfirmationDialog implements DialogInterface.OnClickLis
     public void show() {
         final int confirmAddContactStringId = R.string.add_contact_confirmation;
         final int cancelStringId = android.R.string.cancel;
-        final AlertDialog alertDialog = new AlertDialog.Builder(mContext)
+        final AlertDialog alertDialog = new AlertDialog.Builder(mContext, R.style.AlertDialogTheme)
         .setTitle(R.string.add_contact_confirmation_dialog_title)
         .setView(createBodyView())
         .setPositiveButton(confirmAddContactStringId, this)
@@ -74,9 +74,9 @@ public class AddContactsConfirmationDialog implements DialogInterface.OnClickLis
     private View createBodyView() {
         final View view = LayoutInflater.from(mContext).inflate(
                 R.layout.add_contacts_confirmation_dialog_body, null);
-        final ContactIconView iconView = (ContactIconView) view.findViewById(R.id.contact_icon);
+        final ContactIconView iconView = view.findViewById(R.id.contact_icon);
         iconView.setImageResourceUri(mAvatarUri);
-        final TextView textView = (TextView) view.findViewById(R.id.participant_name);
+        final TextView textView = view.findViewById(R.id.participant_name);
         textView.setText(mNormalizedDestination);
         // Accessibility reason : in case phone numbers are mixed in the display name,
         // we need to vocalize it for talkback.

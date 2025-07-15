@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
- * Copyright (C) 2024 The LineageOS Project
+ * Copyright (C) 2024-2025 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
  */
 package com.android.messaging.datamodel.media;
 
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.android.messaging.Factory;
 import com.android.messaging.util.Assert;
@@ -156,7 +157,7 @@ public class MediaResourceManager {
             final MediaRequest<T> mediaRequest)
                     throws Exception {
         final List<MediaRequest<T>> chainedRequests = new ArrayList<>();
-        T loadedResource = null;
+        T loadedResource;
         // Try fetching from cache first.
         final T cachedResource = loadMediaFromCache(mediaRequest);
         if (cachedResource != null) {
@@ -227,35 +228,30 @@ public class MediaResourceManager {
         if (bindableRequest != null && !bindableRequest.isBound()) {
             return; // Request is obsolete
         }
-        // We don't use SafeAsyncTask here since it enforces the shared thread pool executor
-        // whereas we want a dedicated thread pool executor.
-        AsyncTask<Void, Void, MediaLoadingResult<T>> mediaLoadingTask = new AsyncTask<>() {
-            private Exception mException;
 
-            @Override
-            protected MediaLoadingResult<T> doInBackground(Void... params) {
-                // Double check the request is still valid by the time we start processing it
-                if (bindableRequest != null && !bindableRequest.isBound()) {
-                    return null; // Request is obsolete
-                }
+        Handler handler = new Handler(Looper.getMainLooper());
+        executor.execute(() -> {
+            Exception exception = null;
+
+            MediaLoadingResult<T> tmpResult = null;
+            // Double check the request is still valid by the time we start processing it
+            if (bindableRequest != null && bindableRequest.isBound()) {
                 try {
-                    return processMediaRequestInternal(mediaRequest);
+                    tmpResult = processMediaRequestInternal(mediaRequest);
                 } catch (Exception e) {
-                    mException = e;
-                    return null;
+                    exception = e;
                 }
             }
 
-            @Override
-            protected void onPostExecute(final MediaLoadingResult<T> result) {
+            final Exception mException = exception;
+            final MediaLoadingResult<T> result = tmpResult;
+            handler.post(() -> {
                 if (result != null) {
                     Assert.isNull(mException);
                     Assert.isTrue(result.loadedResource.getRefCount() > 0);
                     try {
-                        if (bindableRequest != null) {
-                            bindableRequest.onMediaResourceLoaded(
-                                    bindableRequest, result.loadedResource, result.fromCache);
-                        }
+                        bindableRequest.onMediaResourceLoaded(
+                                bindableRequest, result.loadedResource, result.fromCache);
                     } finally {
                         result.loadedResource.release();
                         result.scheduleChainedRequests();
@@ -263,19 +259,14 @@ public class MediaResourceManager {
                 } else if (mException != null) {
                     LogUtil.e(LogUtil.BUGLE_TAG, "Asynchronous media loading failed, key=" +
                             mediaRequest.getKey(), mException);
-                    if (bindableRequest != null) {
-                        bindableRequest.onMediaResourceLoadError(bindableRequest, mException);
-                    }
+                    bindableRequest.onMediaResourceLoadError(bindableRequest, mException);
                 } else {
                     Assert.isTrue(bindableRequest == null || !bindableRequest.isBound());
-                    if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-                        LogUtil.v(TAG, "media request not processed, no longer bound; key=" +
-                                LogUtil.sanitizePII(mediaRequest.getKey()) /* key with phone# */);
-                    }
+                    LogUtil.v(TAG, "media request not processed, no longer bound; key=" +
+                            LogUtil.sanitizePII(mediaRequest.getKey()) /* key with phone# */);
                 }
-            }
-        };
-        mediaLoadingTask.executeOnExecutor(executor, (Void) null);
+            });
+        });
     }
 
     @RunsOnAnyThread
@@ -285,10 +276,8 @@ public class MediaResourceManager {
         final MediaCache<T> mediaCache = mediaRequest.getMediaCache();
         if (mediaCache != null) {
             mediaCache.addResourceToCache(mediaRequest.getKey(), mediaResource);
-            if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-                LogUtil.v(TAG, "added media resource to " + mediaCache.getName() + ". key=" +
-                        LogUtil.sanitizePII(mediaRequest.getKey()) /* key can contain phone# */);
-            }
+            LogUtil.v(TAG, "added media resource to " + mediaCache.getName() + ". key=" +
+                    LogUtil.sanitizePII(mediaRequest.getKey()) /* key can contain phone# */);
         }
     }
 

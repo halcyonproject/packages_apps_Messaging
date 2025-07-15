@@ -26,6 +26,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.SystemClock;
+import android.support.v7.mms.pdu.ContentType;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
@@ -40,7 +41,6 @@ import com.android.messaging.R;
 import com.android.messaging.datamodel.data.MessagePartData;
 import com.android.messaging.ui.mediapicker.PausableChronometer;
 import com.android.messaging.util.Assert;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.LogUtil;
 import com.android.messaging.util.UiUtils;
 
@@ -104,9 +104,9 @@ public class AudioAttachmentView extends LinearLayout {
     protected void onFinishInflate() {
         super.onFinishInflate();
 
-        mPlayPauseButton = (AudioAttachmentPlayPauseButton) findViewById(R.id.play_pause_button);
-        mChronometer = (PausableChronometer) findViewById(R.id.timer);
-        mProgressBar = (AudioPlaybackProgressBar) findViewById(R.id.progress);
+        mPlayPauseButton = findViewById(R.id.play_pause_button);
+        mChronometer = findViewById(R.id.timer);
+        mProgressBar = findViewById(R.id.progress);
         mPlayPauseButton.setOnClickListener(v -> {
             // Has the MediaPlayer already been prepared?
             if (mMediaPlayer != null && mPrepared) {
@@ -352,12 +352,12 @@ public class AudioAttachmentView extends LinearLayout {
                 mProgressBar.setVisibility(GONE);
                 mChronometer.setVisibility(GONE);
                 ((MarginLayoutParams) mPlayPauseButton.getLayoutParams()).setMargins(0, 0, 0, 0);
-                final ImageView playButton = (ImageView) findViewById(R.id.play_button);
+                final ImageView playButton = findViewById(R.id.play_button);
                 final Resources res = getResources();
                 final Resources.Theme theme = getContext().getTheme();
                 playButton.setImageDrawable(
                         ResourcesCompat.getDrawable(res, R.drawable.ic_preview_play, theme));
-                final ImageView pauseButton = (ImageView) findViewById(R.id.pause_button);
+                final ImageView pauseButton = findViewById(R.id.pause_button);
                 pauseButton.setImageDrawable(
                         ResourcesCompat.getDrawable(res, R.drawable.ic_preview_pause, theme));
                 break;

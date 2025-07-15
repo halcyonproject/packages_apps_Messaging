@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
- * Copyright (C) 2024 The LineageOS Project
+ * Copyright (C) 2024-2025 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package com.android.messaging.util;
 
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.res.AssetFileDescriptor;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
@@ -259,14 +258,12 @@ public class UriUtil {
 
     /**
      * Persist a piece of content from the given sourceUri, byte by byte to the
-     * specified output directory.
-     * @return the output Uri if the operation succeeded, or null if failed.
+     * specified targetUri.
      */
     @DoesNotRunOnMainThread
-    public static Uri persistContent(
-            final Uri sourceUri, final File outputDir, final String contentType) {
+    public static void persistContent(
+            final Context context, final Uri sourceUri, final Uri targetUri) {
         InputStream inputStream = null;
-        final Context context = Factory.get().getApplicationContext();
         try {
             if (UriUtil.isLocalResourceUri(sourceUri)) {
                 inputStream = context.getContentResolver().openInputStream(sourceUri);
@@ -274,13 +271,12 @@ public class UriUtil {
                 // The content is remote. Download it.
                 inputStream = getInputStreamFromRemoteUri(sourceUri);
                 if (inputStream == null) {
-                    return null;
+                    return;
                 }
             }
-            return persistContent(inputStream, outputDir, contentType);
+            copyContent(context, inputStream, targetUri);
         } catch (final Exception ex) {
             LogUtil.e(LogUtil.BUGLE_TAG, "Error while retrieving media ", ex);
-            return null;
         } finally {
             if (inputStream != null) {
                 try {
@@ -345,32 +341,6 @@ public class UriUtil {
         // replaceUnicodeDigits will replace digits typed in other languages (i.e. Egyptian) with
         // the usual ascii equivalents.
         return TextUtil.replaceUnicodeDigits(parts[0]).replace(';', ',');
-    }
-
-    /**
-     * Return the length of the file to which contentUri refers
-     *
-     * @param contentUri URI for the file of which we want the length
-     * @return Length of the file or AssetFileDescriptor.UNKNOWN_LENGTH
-     */
-    public static long getUriContentLength(final Uri contentUri) {
-        final Context context = Factory.get().getApplicationContext();
-        AssetFileDescriptor afd = null;
-        try {
-            afd = context.getContentResolver().openAssetFileDescriptor(contentUri, "r");
-            return afd.getLength();
-        } catch (final FileNotFoundException e) {
-            LogUtil.w(LogUtil.BUGLE_TAG, "Failed to query length of " + contentUri);
-        } finally {
-            if (afd != null) {
-                try {
-                    afd.close();
-                } catch (final IOException e) {
-                    LogUtil.w(LogUtil.BUGLE_TAG, "Failed to close afd for " + contentUri);
-                }
-            }
-        }
-        return AssetFileDescriptor.UNKNOWN_LENGTH;
     }
 
     /** @return string representation of URI or null if URI was null */

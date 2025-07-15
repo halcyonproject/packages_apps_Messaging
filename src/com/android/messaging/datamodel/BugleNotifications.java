@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
- * Copyright (C) 2024 The LineageOS Project
+ * Copyright (C) 2024-2025 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.Contacts;
+import android.support.v7.mms.pdu.ContentType;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
@@ -70,7 +71,6 @@ import com.android.messaging.util.AvatarUriUtil;
 import com.android.messaging.util.BugleGservicesKeys;
 import com.android.messaging.util.BuglePrefs;
 import com.android.messaging.util.BuglePrefsKeys;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.ConversationIdSet;
 import com.android.messaging.util.ImageUtils;
 import com.android.messaging.util.LogUtil;
@@ -89,7 +89,7 @@ import java.util.Set;
 /**
  * Handle posting, updating and removing all conversation notifications.
  *
- * There are currently two main classes of notification and their rules: <p>
+ * There is currently one main class of notification and rules: <p>
  * 1) Messages - {@link MessageNotificationState}. Only one message notification.
  * Unread messages across senders and conversations are coalesced.<p>
  *
@@ -161,11 +161,9 @@ public class BugleNotifications {
      */
     public static void update(final boolean silent, final String conversationId,
             final int coverage) {
-        if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-            LogUtil.v(TAG, "Update: silent = " + silent
-                    + " conversationId = " + conversationId
-                    + " coverage = " + coverage);
-        }
+        LogUtil.v(TAG, "Update: silent = " + silent
+                + " conversationId = " + conversationId
+                + " coverage = " + coverage);
     Assert.isNotMainThread();
         checkInitialized();
         if ((coverage & UPDATE_MESSAGES) != 0) {
@@ -219,9 +217,7 @@ public class BugleNotifications {
                 final NotificationState notifState = iter.next();
                 if (notifState.mType == type) {
                     notifState.mCanceled = true;
-                    if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-                        LogUtil.v(TAG, "Canceling pending notification");
-                    }
+                    LogUtil.v(TAG, "Canceling pending notification");
                     iter.remove();
                 }
             }
@@ -369,11 +365,9 @@ public class BugleNotifications {
         // conversation list),  then play a notification beep at a low volume and don't display an
         // actual notification.
         if (softSound) {
-            if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-                LogUtil.v(TAG, "processAndSend: fromConversationId == " +
-                        "sCurrentlyDisplayedConversationId so NOT showing notification," +
-                        " but playing soft sound. conversationId: " + conversationId);
-            }
+            LogUtil.v(TAG, "processAndSend: fromConversationId == " +
+                    "sCurrentlyDisplayedConversationId so NOT showing notification," +
+                    " but playing soft sound. conversationId: " + conversationId);
             playObservableConversationNotificationSound(conversationId);
             return;
         }
@@ -708,17 +702,12 @@ public class BugleNotifications {
     private static void fireOffNotification(final NotificationState notificationState,
             final Bitmap attachmentBitmap, final Bitmap avatarBitmap, Bitmap avatarHiResBitmap) {
         if (notificationState.mCanceled) {
-            if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-                LogUtil.v(TAG, "Firing off notification, but notification already canceled");
-            }
+            LogUtil.v(TAG, "Firing off notification, but notification already canceled");
             return;
         }
 
         final Context context = Factory.get().getApplicationContext();
-
-        if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-            LogUtil.v(TAG, "MMS picture loaded, bitmap: " + attachmentBitmap);
-        }
+        LogUtil.v(TAG, "MMS picture loaded, bitmap: " + attachmentBitmap);
 
         final NotificationCompat.Builder notifBuilder = notificationState.mNotificationBuilder;
         notifBuilder.setStyle(notificationState.mNotificationStyle);
@@ -759,9 +748,7 @@ public class BugleNotifications {
     private static void setWearableGroupOptions(final NotificationCompat.Builder notifBuilder,
             final NotificationState notificationState) {
         final String groupKey = "groupkey";
-        if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-            LogUtil.v(TAG, "Group key (for wearables)=" + groupKey);
-        }
+        LogUtil.v(TAG, "Group key (for wearables)=" + groupKey);
         if (notificationState instanceof MultiConversationNotificationState) {
             notifBuilder.setGroup(groupKey).setGroupSummary(true);
         } else if (notificationState instanceof BundledMessageNotificationState) {
@@ -886,7 +873,7 @@ public class BugleNotifications {
         NotificationsUtil.createNotificationChannel(context,
                 NotificationsUtil.DEFAULT_CHANNEL_ID,
                 R.string.notification_channel_messages_title,
-                NotificationManager.IMPORTANCE_DEFAULT,
+                NotificationManager.IMPORTANCE_HIGH,
                 NotificationsUtil.CONVERSATION_GROUP_NAME);
         notificationManager.notify(notificationTag, type, notification);
 

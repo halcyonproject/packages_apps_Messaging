@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
- * Copyright (C) 2024 The LineageOS Project
+ * Copyright (C) 2024-2025 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Typeface;
 import android.net.Uri;
+import android.support.v7.mms.pdu.ContentType;
 import android.text.Html;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -52,7 +53,6 @@ import com.android.messaging.ui.UIIntents;
 import com.android.messaging.util.Assert;
 import com.android.messaging.util.AvatarUriUtil;
 import com.android.messaging.util.BugleGservicesKeys;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.ConversationIdSet;
 import com.android.messaging.util.LogUtil;
 import com.android.messaging.util.NotificationsUtil;
@@ -234,14 +234,6 @@ public abstract class MessageNotificationState extends NotificationState {
             mParticipantCount = participantCount;
         }
 
-        public int getLatestMessageNotificationType() {
-            final MessageLineInfo messageLineInfo = getLatestMessageLineInfo();
-            if (messageLineInfo == null) {
-                return BugleNotifications.LOCAL_SMS_NOTIFICATION;
-            }
-            return messageLineInfo.mNotificationType;
-        }
-
         public String getLatestMessageId() {
             final MessageLineInfo messageLineInfo = getLatestMessageLineInfo();
             if (messageLineInfo == null) {
@@ -362,7 +354,6 @@ public abstract class MessageNotificationState extends NotificationState {
                 if (!(convInfo.mLineInfos.get(0) instanceof MessageLineInfo)) {
                     continue;
                 }
-                setPeopleForConversation(convInfo.mConversationId);
                 final ConversationInfoList list = new ConversationInfoList(
                         convInfo.mTotalMessageCount, Lists.newArrayList(convInfo));
                 mChildren.add(new BundledMessageNotificationState(list, i));
@@ -377,7 +368,7 @@ public abstract class MessageNotificationState extends NotificationState {
         @Override
         protected NotificationCompat.Style build(final Builder builder) {
             builder.setContentTitle(mTitle);
-            NotificationCompat.InboxStyle inboxStyle = null;
+            NotificationCompat.InboxStyle inboxStyle;
             inboxStyle = new NotificationCompat.InboxStyle(builder);
 
             final Context context = Factory.get().getApplicationContext();
@@ -452,8 +443,6 @@ public abstract class MessageNotificationState extends NotificationState {
             super(convList);
             // This conversation has been accepted.
             final ConversationLineInfo convInfo = convList.mConvInfos.get(0);
-            setAvatarUrlsForConversation(convInfo.mConversationId);
-            setPeopleForConversation(convInfo.mConversationId);
 
             final Context context = Factory.get().getApplicationContext();
             MessageLineInfo messageInfo = (MessageLineInfo) convInfo.mLineInfos.get(0);
@@ -476,7 +465,7 @@ public abstract class MessageNotificationState extends NotificationState {
                 final String attachment = context.getString(message);
                 final SpannableStringBuilder spanBuilder = new SpannableStringBuilder();
                 if (!TextUtils.isEmpty(mContent)) {
-                    spanBuilder.append(mContent).append(System.getProperty("line.separator"));
+                    spanBuilder.append(mContent).append(System.lineSeparator());
                 }
                 final int start = spanBuilder.length();
                 spanBuilder.append(attachment);
@@ -507,7 +496,7 @@ public abstract class MessageNotificationState extends NotificationState {
             builder.setContentTitle(mTitle)
                 .setTicker(getTicker());
 
-            NotificationCompat.Style notifStyle = null;
+            NotificationCompat.Style notifStyle;
             final ConversationLineInfo convInfo = mConvList.mConvInfos.get(0);
             final List<NotificationLineInfo> lineInfos = convInfo.mLineInfos;
             final int messageCount = lineInfos.size();
@@ -817,9 +806,7 @@ public abstract class MessageNotificationState extends NotificationState {
                     null);
 
             if (convMessageCursor != null && convMessageCursor.moveToFirst()) {
-                if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-                    LogUtil.v(TAG, "MessageNotificationState: Found unseen message notifications.");
-                }
+                LogUtil.v(TAG, "MessageNotificationState: Found unseen message notifications.");
                 final ConversationMessageData convMessageData =
                         new ConversationMessageData();
 
@@ -919,7 +906,7 @@ public abstract class MessageNotificationState extends NotificationState {
                                     Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                             if (!TextUtils.isEmpty(text)) {
                                 // Now add the actual message text below the subject header.
-                                spanBuilder.append(System.getProperty("line.separator") + text);
+                                spanBuilder.append(System.lineSeparator() + text);
                             }
                             text = spanBuilder;
                         }
@@ -1021,9 +1008,7 @@ public abstract class MessageNotificationState extends NotificationState {
         final ConversationInfoList convList = createConversationInfoList();
 
         if (convList == null || convList.mConvInfos.size() == 0) {
-            if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-                LogUtil.v(TAG, "MessageNotificationState: No unseen notifications");
-            }
+            LogUtil.v(TAG, "MessageNotificationState: No unseen notifications");
         } else {
             final ConversationLineInfo convInfo = convList.mConvInfos.get(0);
             state = new MultiMessageNotificationState(convList);
@@ -1049,7 +1034,7 @@ public abstract class MessageNotificationState extends NotificationState {
                 }
             }
         }
-        if (state != null && LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
+        if (state != null) {
             LogUtil.v(TAG, "MessageNotificationState: Notification state created"
                     + ", title = "
                     + (state.mTickerSender != null ? state.mTickerSender : state.mTitle)
@@ -1061,18 +1046,6 @@ public abstract class MessageNotificationState extends NotificationState {
 
     protected String getTitle() {
         return mTitle;
-    }
-
-    @Override
-    public int getLatestMessageNotificationType() {
-        // This function is called to determine whether the most recent notification applies
-        // to an sms conversation or a hangout conversation. We have different ringtone/vibrate
-        // settings for both types of conversations.
-        if (mConvList.mConvInfos.size() > 0) {
-            final ConversationLineInfo convInfo = mConvList.mConvInfos.get(0);
-            return convInfo.getLatestMessageNotificationType();
-        }
-        return BugleNotifications.LOCAL_SMS_NOTIFICATION;
     }
 
     protected CharSequence getTicker() {

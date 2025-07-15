@@ -31,15 +31,32 @@ import android.provider.Telephony.Mms.Addr;
 import android.provider.Telephony.Mms.Part;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.MmsSms.PendingMessages;
-import androidx.collection.SimpleArrayMap;
+import android.support.v7.mms.pdu.AcknowledgeInd;
+import android.support.v7.mms.pdu.CharacterSets;
+import android.support.v7.mms.pdu.ContentType;
+import android.support.v7.mms.pdu.DeliveryInd;
+import android.support.v7.mms.pdu.EncodedStringValue;
+import android.support.v7.mms.pdu.GenericPdu;
+import android.support.v7.mms.pdu.InvalidHeaderValueException;
+import android.support.v7.mms.pdu.MmsException;
+import android.support.v7.mms.pdu.MultimediaMessagePdu;
+import android.support.v7.mms.pdu.NotificationInd;
+import android.support.v7.mms.pdu.NotifyRespInd;
+import android.support.v7.mms.pdu.PduBody;
+import android.support.v7.mms.pdu.PduHeaders;
+import android.support.v7.mms.pdu.PduPart;
+import android.support.v7.mms.pdu.ReadOrigInd;
+import android.support.v7.mms.pdu.ReadRecInd;
+import android.support.v7.mms.pdu.RetrieveConf;
+import android.support.v7.mms.pdu.SendReq;
 import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 
-import com.android.messaging.mmslib.InvalidHeaderValueException;
-import com.android.messaging.mmslib.MmsException;
+import androidx.collection.SimpleArrayMap;
+
 import com.android.messaging.mmslib.SqliteWrapper;
 import com.android.messaging.mmslib.util.DownloadDrmHelper;
 import com.android.messaging.mmslib.util.DrmConvertSession;
@@ -47,7 +64,6 @@ import com.android.messaging.mmslib.util.PduCache;
 import com.android.messaging.mmslib.util.PduCacheEntry;
 import com.android.messaging.sms.MmsSmsUtils;
 import com.android.messaging.util.Assert;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.LogUtil;
 import com.android.messaging.util.UriUtil;
 
@@ -357,7 +373,7 @@ public class PduPersister {
                 Uri.parse("content://mms/" + msgId + "/part"),
                 PART_PROJECTION, null, null, null);
 
-        PduPart[] parts = null;
+        PduPart[] parts;
 
         try {
             if ((c == null) || (c.getCount() == 0)) {
@@ -544,7 +560,7 @@ public class PduPersister {
      */
     public GenericPdu load(final Uri uri) throws MmsException {
         GenericPdu pdu = null;
-        PduCacheEntry cacheEntry = null;
+        PduCacheEntry cacheEntry;
         int msgBox = 0;
         final long threadId = -1;
         try {
@@ -843,7 +859,7 @@ public class PduPersister {
         OutputStream os = null;
         InputStream is = null;
         DrmConvertSession drmConvertSession = null;
-        Uri dataUri = null;
+        Uri dataUri;
         String path = null;
 
         try {
@@ -920,7 +936,7 @@ public class PduPersister {
                     }
 
                     final byte[] buffer = new byte[8192];
-                    for (int len = 0; (len = is.read(buffer)) != -1; ) {
+                    for (int len; (len = is.read(buffer)) != -1; ) {
                         if (!isDrm) {
                             os.write(buffer, 0, len);
                         } else {
@@ -939,7 +955,6 @@ public class PduPersister {
                     if (!isDrm) {
                         os.write(data);
                     } else {
-                        dataUri = uri;
                         final byte[] convertedData = drmConvertSession.convert(data, data.length);
                         if (convertedData != null) {
                             os.write(convertedData, 0, convertedData.length);
@@ -1077,7 +1092,7 @@ public class PduPersister {
         PDU_CACHE_INSTANCE.purge(uri);
 
         final PduHeaders header = pdu.getPduHeaders();
-        PduBody body = null;
+        PduBody body;
         ContentValues values = new ContentValues();
 
         // Mark new messages as seen in the telephony database so that we don't have to

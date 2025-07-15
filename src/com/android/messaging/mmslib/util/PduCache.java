@@ -22,9 +22,10 @@ import android.content.ContentUris;
 import android.content.UriMatcher;
 import android.net.Uri;
 import android.provider.Telephony.Mms;
-import androidx.collection.SimpleArrayMap;
 import android.util.Log;
 import android.util.SparseArray;
+
+import androidx.collection.SimpleArrayMap;
 
 import java.util.HashSet;
 
@@ -187,7 +188,7 @@ public final class PduCache extends AbstractCache<Uri, PduCacheEntry> {
      */
     private Uri normalizeKey(Uri uri) {
         int match = URI_MATCHER.match(uri);
-        Uri normalizedKey = null;
+        Uri normalizedKey;
 
         switch (match) {
             case MMS_ALL_ID:

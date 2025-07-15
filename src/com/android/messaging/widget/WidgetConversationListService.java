@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
- * Copyright (C) 2024 The LineageOS Project
+ * Copyright (C) 2024-2025 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import android.database.Cursor;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v7.mms.pdu.ContentType;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.TextPaint;
@@ -41,7 +42,6 @@ import com.android.messaging.datamodel.data.ConversationListItemData;
 import com.android.messaging.sms.MmsUtils;
 import com.android.messaging.ui.UIIntents;
 import com.android.messaging.ui.conversationlist.ConversationListItemView;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.Dates;
 import com.android.messaging.util.LogUtil;
 import com.android.messaging.util.PhoneUtils;
@@ -51,9 +51,7 @@ public class WidgetConversationListService extends RemoteViewsService {
 
     @Override
     public RemoteViewsFactory onGetViewFactory(Intent intent) {
-        if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-            LogUtil.v(TAG, "onGetViewFactory intent: " + intent);
-        }
+        LogUtil.v(TAG, "onGetViewFactory intent: " + intent);
         return new WidgetConversationListFactory(getApplicationContext(), intent);
     }
 
@@ -80,9 +78,7 @@ public class WidgetConversationListService extends RemoteViewsService {
          */
         @Override
         public RemoteViews getViewAt(int position) {
-            if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-                LogUtil.v(TAG, "getViewAt position: " + position);
-            }
+            LogUtil.v(TAG, "getViewAt position: " + position);
             synchronized (sWidgetLock) {
                 // "View more conversations" view.
                 if (mCursor == null
@@ -129,10 +125,8 @@ public class WidgetConversationListService extends RemoteViewsService {
                 // Avatar
                 boolean includeAvatar;
                 final Bundle options = mAppWidgetManager.getAppWidgetOptions(mAppWidgetId);
-                if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-                    LogUtil.v(TAG, "getViewAt BugleWidgetProvider.WIDGET_SIZE_KEY: " +
-                            options.getInt(BugleWidgetProvider.WIDGET_SIZE_KEY));
-                }
+                LogUtil.v(TAG, "getViewAt BugleWidgetProvider.WIDGET_SIZE_KEY: " +
+                        options.getInt(BugleWidgetProvider.WIDGET_SIZE_KEY));
 
                 includeAvatar = options.getInt(BugleWidgetProvider.WIDGET_SIZE_KEY) ==
                         BugleWidgetProvider.SIZE_LARGE;
@@ -231,9 +225,7 @@ public class WidgetConversationListService extends RemoteViewsService {
          */
         @Override
         protected RemoteViews getViewMoreItemsView() {
-            if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-                LogUtil.v(TAG, "getViewMoreItemsView");
-            }
+            LogUtil.v(TAG, "getViewMoreItemsView");
             final RemoteViews view = new RemoteViews(mContext.getPackageName(),
                     R.layout.widget_loading);
             view.setTextViewText(

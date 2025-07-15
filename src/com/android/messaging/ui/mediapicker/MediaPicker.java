@@ -210,7 +210,7 @@ public class MediaPicker extends Fragment implements DraftMessageSubscriptionDat
                 container,
                 false);
         mMediaPickerPanel.setMediaPicker(this);
-        mTabStrip = (LinearLayout) mMediaPickerPanel.findViewById(R.id.mediapicker_tabstrip);
+        mTabStrip = mMediaPickerPanel.findViewById(R.id.mediapicker_tabstrip);
         mTabStrip.setBackgroundColor(mThemeColor);
         for (final MediaChooser chooser : mChoosers) {
             chooser.onCreateTabButton(inflater, mTabStrip);
@@ -221,8 +221,8 @@ public class MediaPicker extends Fragment implements DraftMessageSubscriptionDat
             }
         }
 
-        mViewPager = (ViewPager) mMediaPickerPanel.findViewById(R.id.mediapicker_view_pager);
-        mViewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+        mViewPager = mMediaPickerPanel.findViewById(R.id.mediapicker_view_pager);
+        mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(
                     final int position,
@@ -276,15 +276,6 @@ public class MediaPicker extends Fragment implements DraftMessageSubscriptionDat
         super.onPause();
         for (final MediaChooser chooser : mEnabledChoosers) {
             chooser.onPause();
-        }
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-
-        for (final MediaChooser chooser : mEnabledChoosers) {
-            chooser.onResume();
         }
     }
 
@@ -545,7 +536,6 @@ public class MediaPicker extends Fragment implements DraftMessageSubscriptionDat
             mListenerHandler.post(() -> mListener.onOpened());
         }
         if (mSelectedChooser != null) {
-            mSelectedChooser.onFullScreenChanged(false);
             mSelectedChooser.onOpenedChanged(true);
         }
     }
@@ -565,9 +555,6 @@ public class MediaPicker extends Fragment implements DraftMessageSubscriptionDat
         setHasOptionsMenu(fullScreen);
         if (mListener != null) {
             mListenerHandler.post(() -> mListener.onFullScreenChanged(fullScreen));
-        }
-        if (mSelectedChooser != null) {
-            mSelectedChooser.onFullScreenChanged(fullScreen);
         }
     }
 
@@ -641,9 +628,6 @@ public class MediaPicker extends Fragment implements DraftMessageSubscriptionDat
     @Override
     public void onCreateOptionsMenu(@NonNull final Menu menu,
                                     @NonNull final MenuInflater inflater) {
-        if (mSelectedChooser != null) {
-            mSelectedChooser.onCreateOptionsMenu(inflater, menu);
-        }
     }
 
     @Override

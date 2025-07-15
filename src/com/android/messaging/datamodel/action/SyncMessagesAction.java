@@ -25,6 +25,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.SystemClock;
 import android.provider.Telephony.Mms;
+import android.support.v7.mms.pdu.ContentType;
 
 import androidx.annotation.NonNull;
 import androidx.collection.LongSparseArray;
@@ -46,7 +47,6 @@ import com.android.messaging.util.Assert;
 import com.android.messaging.util.BugleGservicesKeys;
 import com.android.messaging.util.BuglePrefs;
 import com.android.messaging.util.BuglePrefsKeys;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.LogUtil;
 import com.android.messaging.util.OsUtil;
 
@@ -272,10 +272,10 @@ public class SyncMessagesAction extends Action implements Parcelable {
         final long startTimeMillis = SystemClock.elapsedRealtime();
 
         // Number of messages scanned local and remote
-        int localPos = 0;
-        int remotePos = 0;
-        int localTotal = 0;
-        int remoteTotal = 0;
+        int localPos;
+        int remotePos;
+        int localTotal;
+        int remoteTotal;
         // Scan through the messages on both sides and prepare messages for local message table
         // changes (including adding and deleting)
         try {
@@ -383,11 +383,12 @@ public class SyncMessagesAction extends Action implements Parcelable {
             } else {
                 // Succeeded
                 final ArrayList<SmsMessage> smsToAdd =
-                        response.getParcelableArrayList(BUNDLE_KEY_SMS_MESSAGES);
+                        response.getParcelableArrayList(BUNDLE_KEY_SMS_MESSAGES, SmsMessage.class);
                 final ArrayList<MmsMessage> mmsToAdd =
-                        response.getParcelableArrayList(BUNDLE_KEY_MMS_MESSAGES);
+                        response.getParcelableArrayList(BUNDLE_KEY_MMS_MESSAGES, MmsMessage.class);
                 final ArrayList<LocalDatabaseMessage> messagesToDelete =
-                        response.getParcelableArrayList(BUNDLE_KEY_MESSAGES_TO_DELETE);
+                        response.getParcelableArrayList(BUNDLE_KEY_MESSAGES_TO_DELETE,
+                                LocalDatabaseMessage.class);
 
                 final int messagesUpdated = smsToAdd.size() + mmsToAdd.size()
                         + messagesToDelete.size();

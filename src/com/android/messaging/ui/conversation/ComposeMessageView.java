@@ -21,6 +21,9 @@ import android.content.res.Resources;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.support.v7.mms.pdu.ContentType;
 import android.text.Editable;
 import android.text.Html;
 import android.text.InputFilter;
@@ -66,17 +69,17 @@ import com.android.messaging.util.AccessibilityUtil;
 import com.android.messaging.util.Assert;
 import com.android.messaging.util.AvatarUriUtil;
 import com.android.messaging.util.BuglePrefs;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.LogUtil;
 import com.android.messaging.util.MediaUtil;
 import com.android.messaging.util.PhoneUtils;
-import com.android.messaging.util.SafeAsyncTask;
 import com.android.messaging.util.UiUtils;
 import com.android.messaging.util.UriUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * This view contains the UI required to generate and send messages.
@@ -192,8 +195,7 @@ public class ComposeMessageView extends LinearLayout
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
-        mComposeEditText = (PlainTextEditText) findViewById(
-                R.id.compose_message_text);
+        mComposeEditText = findViewById(R.id.compose_message_text);
         mComposeEditText.setOnEditorActionListener(this);
         mComposeEditText.addTextChangedListener(this);
         mComposeEditText.setOnFocusChangeListener((v, hasFocus) -> {
@@ -213,7 +215,7 @@ public class ComposeMessageView extends LinearLayout
                 new LengthFilter(MmsConfig.get(ParticipantData.DEFAULT_SELF_SUB_ID)
                         .getMaxTextLimit()) });
 
-        mSelfSendIcon = (SimIconView) findViewById(R.id.self_send_icon);
+        mSelfSendIcon = findViewById(R.id.self_send_icon);
         mSelfSendIcon.setOnClickListener(v -> {
             boolean shown = mInputManager.toggleSimSelector(true /* animate */,
                     getSelfSubscriptionListEntry());
@@ -230,8 +232,7 @@ public class ComposeMessageView extends LinearLayout
             return true;
         });
 
-        mComposeSubjectText = (PlainTextEditText) findViewById(
-                R.id.compose_subject_text);
+        mComposeSubjectText = findViewById(R.id.compose_subject_text);
         // We need the listener to change the avatar to the send button when the user starts
         // typing a subject without a message.
         mComposeSubjectText.addTextChangedListener(this);
@@ -241,7 +242,7 @@ public class ComposeMessageView extends LinearLayout
                 new LengthFilter(MmsConfig.get(ParticipantData.DEFAULT_SELF_SUB_ID)
                         .getMaxSubjectLength())});
 
-        mDeleteSubjectButton = (ImageButton) findViewById(R.id.delete_subject_button);
+        mDeleteSubjectButton = findViewById(R.id.delete_subject_button);
         mDeleteSubjectButton.setOnClickListener(clickView -> {
             hideSubjectEditor();
             mComposeSubjectText.setText(null);
@@ -250,7 +251,7 @@ public class ComposeMessageView extends LinearLayout
 
         mSubjectView = findViewById(R.id.subject_view);
 
-        mSendButton = (ImageButton) findViewById(R.id.send_message_button);
+        mSendButton = findViewById(R.id.send_message_button);
         mSendButton.setOnClickListener(clickView ->
                 sendMessageInternal(true /* checkMessageSize */));
         mSendButton.setOnLongClickListener(arg0 -> {
@@ -281,18 +282,17 @@ public class ComposeMessageView extends LinearLayout
             }
         });
 
-        mAttachMediaButton =
-                (ImageButton) findViewById(R.id.attach_media_button);
+        mAttachMediaButton = findViewById(R.id.attach_media_button);
         mAttachMediaButton.setOnClickListener(clickView -> {
             // Showing the media picker is treated as starting to compose the message.
             mInputManager.showHideMediaPicker(true /* show */, true /* animate */);
         });
 
-        mAttachmentPreview = (AttachmentPreview) findViewById(R.id.attachment_draft_view);
+        mAttachmentPreview = findViewById(R.id.attachment_draft_view);
         mAttachmentPreview.setComposeMessageView(this);
 
-        mMessageBodySize = (TextView) findViewById(R.id.message_body_size);
-        mMmsIndicator = (TextView) findViewById(R.id.mms_indicator);
+        mMessageBodySize = findViewById(R.id.message_body_size);
+        mMmsIndicator = findViewById(R.id.mms_indicator);
     }
 
     private void hideAttachmentsWhenShowingSims(final boolean simPickerVisible) {
@@ -596,10 +596,11 @@ public class ComposeMessageView extends LinearLayout
                 mConversationDataModel.getData().getParticipantsLoaded();
     }
 
-    private static class AsyncUpdateMessageBodySizeTask
-            extends SafeAsyncTask<List<MessagePartData>, Void, Long> {
+    private static class AsyncUpdateMessageBodySizeTask {
 
         private final Context mContext;
+        private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
+        private final Handler mHandler = new Handler(Looper.getMainLooper());
         private final TextView mSizeTextView;
 
         public AsyncUpdateMessageBodySizeTask(final Context context, final TextView tv) {
@@ -607,20 +608,23 @@ public class ComposeMessageView extends LinearLayout
             mSizeTextView = tv;
         }
 
-        @Override
-        protected Long doInBackgroundTimed(final List<MessagePartData>... params) {
-            final List<MessagePartData> attachments = params[0];
-            long totalSize = 0;
-            for (final MessagePartData attachment : attachments) {
-                final Uri contentUri = attachment.getContentUri();
-                if (contentUri != null) {
-                    totalSize += UriUtil.getContentSize(attachment.getContentUri());
+        protected void execute(final List<MessagePartData> attachments) {
+            mExecutor.execute(() -> {
+                long totalSize = 0;
+                for (final MessagePartData attachment : attachments) {
+                    final Uri contentUri = attachment.getContentUri();
+                    if (contentUri != null) {
+                        totalSize += UriUtil.getContentSize(attachment.getContentUri());
+                    }
                 }
-            }
-            return totalSize;
+
+                final long size = totalSize;
+                mHandler.post(() -> {
+                    onPostExecute(size);
+                });
+            });
         }
 
-        @Override
         protected void onPostExecute(Long size) {
             if (mSizeTextView != null) {
                 mSizeTextView.setText(Formatter.formatFileSize(mContext, size));
@@ -656,7 +660,7 @@ public class ComposeMessageView extends LinearLayout
                 if (hasAttachmentsChanged) {
                     // Calculate message attachments size and show it.
                     new AsyncUpdateMessageBodySizeTask(getContext(), mMessageBodySize)
-                            .executeOnThreadPool(attachments, null, null);
+                            .execute(attachments);
                 } else {
                     // No update. Just show previous size.
                     mMessageBodySize.setVisibility(View.VISIBLE);

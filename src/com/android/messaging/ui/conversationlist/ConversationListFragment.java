@@ -42,7 +42,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.messaging.R;
-import com.android.messaging.annotation.VisibleForAnimation;
 import com.android.messaging.datamodel.DataModel;
 import com.android.messaging.datamodel.binding.Binding;
 import com.android.messaging.datamodel.binding.BindingBase;
@@ -53,7 +52,6 @@ import com.android.messaging.ui.ListEmptyView;
 import com.android.messaging.ui.SnackBarInteraction;
 import com.android.messaging.ui.UIIntents;
 import com.android.messaging.util.AccessibilityUtil;
-import com.android.messaging.util.Assert;
 import com.android.messaging.util.ImeUtil;
 import com.android.messaging.util.LogUtil;
 import com.android.messaging.util.UiUtils;
@@ -69,7 +67,6 @@ public class ConversationListFragment extends Fragment implements ConversationLi
         ConversationListItemView.HostInterface {
     private static final String BUNDLE_ARCHIVED_MODE = "archived_mode";
     private static final String BUNDLE_FORWARD_MESSAGE_MODE = "forward_message_mode";
-    private static final boolean VERBOSE = false;
 
     private MenuItem mShowBlockedMenuItem;
     private boolean mArchiveMode;
@@ -112,9 +109,11 @@ public class ConversationListFragment extends Fragment implements ConversationLi
 
     public static ConversationListFragment createConversationListFragment(String modeKeyName) {
         final ConversationListFragment fragment = new ConversationListFragment();
-        final Bundle bundle = new Bundle();
-        bundle.putBoolean(modeKeyName, true);
-        fragment.setArguments(bundle);
+        if (modeKeyName != null) {
+            final Bundle bundle = new Bundle();
+            bundle.putBoolean(modeKeyName, true);
+            fragment.setArguments(bundle);
+        }
         return fragment;
     }
 
@@ -132,7 +131,7 @@ public class ConversationListFragment extends Fragment implements ConversationLi
     public void onResume() {
         super.onResume();
 
-        Assert.notNull(mHost);
+        mHost = (ConversationListFragmentHost) getActivity();
         setScrolledToNewestConversationIfNeeded();
 
         updateUi();
@@ -171,8 +170,8 @@ public class ConversationListFragment extends Fragment implements ConversationLi
             final Bundle savedInstanceState) {
         final ViewGroup rootView = (ViewGroup) inflater.inflate(R.layout.conversation_list_fragment,
                 container, false);
-        mRecyclerView = (RecyclerView) rootView.findViewById(android.R.id.list);
-        mEmptyListMessageView = (ListEmptyView) rootView.findViewById(R.id.no_conversations_view);
+        mRecyclerView = rootView.findViewById(android.R.id.list);
+        mEmptyListMessageView = rootView.findViewById(R.id.no_conversations_view);
         mEmptyListMessageView.setImageHint(R.drawable.ic_oobe_conv_list);
         // The default behavior for default layout param generation by LinearLayoutManager is to
         // provide width and height of WRAP_CONTENT, but this is not desirable for
@@ -189,7 +188,7 @@ public class ConversationListFragment extends Fragment implements ConversationLi
         mRecyclerView.setLayoutManager(manager);
         mRecyclerView.setHasFixedSize(true);
         mRecyclerView.setAdapter(mAdapter);
-        mRecyclerView.setOnScrollListener(new RecyclerView.OnScrollListener() {
+        mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             int mCurrentState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
 
             @Override
@@ -216,11 +215,11 @@ public class ConversationListFragment extends Fragment implements ConversationLi
         mRecyclerView.addOnItemTouchListener(new ConversationListSwipeHelper(mRecyclerView));
 
         if (savedInstanceState != null) {
-            mListState = savedInstanceState.getParcelable(SAVED_INSTANCE_STATE_LIST_VIEW_STATE_KEY);
+            mListState = savedInstanceState.getParcelable(SAVED_INSTANCE_STATE_LIST_VIEW_STATE_KEY,
+                    Parcelable.class);
         }
 
-        mStartNewConversationButton = (ExtendedFloatingActionButton) rootView.findViewById(
-                R.id.start_new_conversation_button);
+        mStartNewConversationButton = rootView.findViewById(R.id.start_new_conversation_button);
         if (mArchiveMode || mForwardMessageMode) {
             mStartNewConversationButton.setVisibility(View.GONE);
         } else {
@@ -242,9 +241,7 @@ public class ConversationListFragment extends Fragment implements ConversationLi
     @Override
     public void onAttach(@NonNull final Context context) {
         super.onAttach(context);
-        if (VERBOSE) {
-            LogUtil.v(LogUtil.BUGLE_TAG, "Attaching List");
-        }
+        LogUtil.v(LogUtil.BUGLE_TAG, "Attaching List");
         final Bundle arguments = getArguments();
         if (arguments != null) {
             mArchiveMode = arguments.getBoolean(BUNDLE_ARCHIVED_MODE, false);
@@ -267,14 +264,6 @@ public class ConversationListFragment extends Fragment implements ConversationLi
         super.onPause();
         mListState = mRecyclerView.getLayoutManager().onSaveInstanceState();
         mListBinding.getData().setScrolledToNewestConversation(false);
-    }
-
-    /**
-     * Call this immediately after attaching the fragment
-     */
-    public void setHost(final ConversationListFragmentHost host) {
-        Assert.isNull(mHost);
-        mHost = host;
     }
 
     @Override

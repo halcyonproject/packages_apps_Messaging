@@ -26,6 +26,7 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.media.MediaRecorder;
 import android.net.Uri;
+import android.support.v7.mms.pdu.ContentType;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -42,13 +43,13 @@ import com.android.messaging.datamodel.data.MediaPickerMessagePartData;
 import com.android.messaging.datamodel.data.MessagePartData;
 import com.android.messaging.sms.MmsConfig;
 import com.android.messaging.util.Assert;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.LogUtil;
 import com.android.messaging.util.MediaUtil;
 import com.android.messaging.util.MediaUtil.OnCompletionListener;
-import com.android.messaging.util.SafeAsyncTask;
 import com.android.messaging.util.ThreadUtil;
 import com.android.messaging.util.UiUtils;
+
+import java.util.concurrent.Executors;
 
 /**
  * Hosts an audio recorder with tap and hold to record functionality.
@@ -113,11 +114,11 @@ public class AudioRecordView extends FrameLayout implements
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
-        mSoundLevels = (SoundLevels) findViewById(R.id.sound_levels);
-        mRecordButtonVisual = (ImageView) findViewById(R.id.record_button_visual);
+        mSoundLevels = findViewById(R.id.sound_levels);
+        mRecordButtonVisual = findViewById(R.id.record_button_visual);
         mRecordButton = findViewById(R.id.record_button);
-        mHintTextView = (TextView) findViewById(R.id.hint_text);
-        mTimerTextView = (PausableChronometer) findViewById(R.id.timer_text);
+        mHintTextView = findViewById(R.id.hint_text);
+        mTimerTextView = findViewById(R.id.timer_text);
         mSoundLevels.setLevelSource(mMediaRecorder.getLevelSource());
         mRecordButton.setOnTouchListener((v, event) -> {
             final int action = event.getActionMasked();
@@ -260,7 +261,7 @@ public class AudioRecordView extends FrameLayout implements
             // "tap+hold" to record audio.
             final Uri outputUri = stopRecording();
             if (outputUri != null) {
-                SafeAsyncTask.executeOnThreadPool(() ->
+                Executors.newSingleThreadExecutor().execute(() ->
                         Factory.get().getApplicationContext().getContentResolver().delete(
                                 outputUri, null, null));
             }

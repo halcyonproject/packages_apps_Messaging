@@ -21,6 +21,7 @@ import android.content.Intent;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v7.mms.pdu.ContentType;
 import android.text.TextUtils;
 import android.view.MenuItem;
 
@@ -40,7 +41,6 @@ import com.android.messaging.ui.conversation.ConversationActivityUiState.Convers
 import com.android.messaging.ui.conversation.ConversationFragment.ConversationFragmentHost;
 import com.android.messaging.ui.conversationlist.ConversationListActivity;
 import com.android.messaging.util.Assert;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.LogUtil;
 import com.android.messaging.util.UiUtils;
 
@@ -71,7 +71,8 @@ public class ConversationActivity extends BugleActionBarActivity
 
         // Do our best to restore UI state from saved instance state.
         if (savedInstanceState != null) {
-            mUiState = savedInstanceState.getParcelable(SAVED_INSTANCE_STATE_UI_STATE_KEY);
+            mUiState = savedInstanceState.getParcelable(SAVED_INSTANCE_STATE_UI_STATE_KEY,
+                    ConversationActivityUiState.class);
         } else {
             if (intent.
                     getBooleanExtra(UIIntents.UI_INTENT_EXTRA_GOTO_CONVERSATION_LIST, false)) {
@@ -278,14 +279,6 @@ public class ConversationActivity extends BugleActionBarActivity
     }
 
     @Override // From ConversationFragmentHost
-    public void onConversationMessagesUpdated(final int numberOfMessages) {
-    }
-
-    @Override // From ConversationFragmentHost
-    public void onConversationParticipantDataLoaded(final int numberOfParticipants) {
-    }
-
-    @Override // From ConversationFragmentHost
     public boolean isActiveAndFocused() {
         return !mIsPaused && hasWindowFocus();
     }
@@ -321,7 +314,7 @@ public class ConversationActivity extends BugleActionBarActivity
                         conversationFragment, ConversationFragment.FRAGMENT_TAG);
             }
             final MessageData draftData = intent.getParcelableExtra(
-                    UIIntents.UI_INTENT_EXTRA_DRAFT_DATA);
+                    UIIntents.UI_INTENT_EXTRA_DRAFT_DATA, MessageData.class);
             if (!needContactPickerFragment) {
                 // Once the user has committed the audience,remove the draft data from the
                 // intent to prevent reuse

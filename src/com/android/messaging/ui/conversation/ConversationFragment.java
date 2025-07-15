@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
- * Copyright (C) 2024 The LineageOS Project
+ * Copyright (C) 2024-2025 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,11 @@
 package com.android.messaging.ui.conversation;
 
 import android.app.Activity;
-import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -34,7 +35,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Parcelable;
+import android.provider.MediaStore;
+import android.support.v7.mms.pdu.ContentType;
 import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
 import android.view.ActionMode;
@@ -48,8 +52,6 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -100,12 +102,9 @@ import com.android.messaging.util.AccessibilityUtil;
 import com.android.messaging.util.Assert;
 import com.android.messaging.util.AvatarUriUtil;
 import com.android.messaging.util.ChangeDefaultSmsAppHelper;
-import com.android.messaging.util.ContentType;
 import com.android.messaging.util.ImeUtil;
 import com.android.messaging.util.LogUtil;
-import com.android.messaging.util.OsUtil;
 import com.android.messaging.util.PhoneUtils;
-import com.android.messaging.util.SafeAsyncTask;
 import com.android.messaging.util.TextUtil;
 import com.android.messaging.util.UiUtils;
 import com.android.messaging.util.UriUtil;
@@ -113,6 +112,8 @@ import com.android.messaging.util.UriUtil;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Shows a list of messages/parts comprising a conversation.
@@ -130,14 +131,11 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
         ActionMode startActionMode(ActionMode.Callback callback);
         void dismissActionMode();
         ActionMode getActionMode();
-        void onConversationMessagesUpdated(int numberOfMessages);
-        void onConversationParticipantDataLoaded(int numberOfParticipants);
         boolean isActiveAndFocused();
     }
 
     public static final String FRAGMENT_TAG = "conversation";
 
-    static final int REQUEST_CHOOSE_ATTACHMENTS = 2;
     private static final int JUMP_SCROLL_THRESHOLD = 15;
     // We animate the message from draft to message list, if we the message doesn't show up in the
     // list within this time limit, then we just do a fade in animation instead
@@ -312,7 +310,7 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
                             part.getContentType());
                 }
                 if (saveAttachmentTask.getAttachmentCount() > 0) {
-                    saveAttachmentTask.executeOnThreadPool();
+                    saveAttachmentTask.execute();
                     mHost.dismissActionMode();
                 }
                 return true;
@@ -508,7 +506,7 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
             final Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.conversation_fragment, container, false);
-        mRecyclerView = (RecyclerView) view.findViewById(android.R.id.list);
+        mRecyclerView = view.findViewById(android.R.id.list);
         final LinearLayoutManager manager = new LinearLayoutManager(getActivity());
         manager.setStackFromEnd(true);
         manager.setReverseLayout(false);
@@ -530,16 +528,14 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
                         !data.getIsIncoming() &&
                         timeSinceSend < MESSAGE_ANIMATION_MAX_WAIT) {
                     final ConversationMessageBubbleView messageBubble =
-                            (ConversationMessageBubbleView) view
-                                    .findViewById(R.id.message_content);
+                            view.findViewById(R.id.message_content);
                     final Rect startRect = UiUtils.getMeasuredBoundsOnScreen(mComposeMessageView);
                     final View composeBubbleView = mComposeMessageView.findViewById(
                             R.id.compose_message_text);
                     final Rect composeBubbleRect =
                             UiUtils.getMeasuredBoundsOnScreen(composeBubbleView);
                     final AttachmentPreview attachmentView =
-                            (AttachmentPreview) mComposeMessageView.findViewById(
-                                    R.id.attachment_draft_view);
+                            mComposeMessageView.findViewById(R.id.attachment_draft_view);
                     final Rect attachmentRect = UiUtils.getMeasuredBoundsOnScreen(attachmentView);
                     if (attachmentView.getVisibility() == View.VISIBLE) {
                         startRect.top = attachmentRect.top;
@@ -549,7 +545,7 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
                     startRect.top -= view.getPaddingTop();
                     startRect.bottom =
                             composeBubbleRect.bottom;
-                    startRect.left += view.getPaddingRight();
+                    startRect.left += view.getPaddingEnd();
 
                     view.setAlpha(0);
                     mPopupTransitionAnimation = new PopupTransitionAnimation(startRect, view);
@@ -595,7 +591,8 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
         mRecyclerView.setAdapter(mAdapter);
 
         if (savedInstanceState != null) {
-            mListState = savedInstanceState.getParcelable(SAVED_INSTANCE_STATE_LIST_VIEW_STATE_KEY);
+            mListState = savedInstanceState.getParcelable(SAVED_INSTANCE_STATE_LIST_VIEW_STATE_KEY,
+                    Parcelable.class);
         }
 
         mConversationComposeDivider = view.findViewById(R.id.conversation_compose_divider);
@@ -605,8 +602,7 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
                 UiUtils.isRtlMode() ? ConversationFastScroller.POSITION_LEFT_SIDE :
                     ConversationFastScroller.POSITION_RIGHT_SIDE);
 
-        mComposeMessageView = (ComposeMessageView)
-                view.findViewById(R.id.message_compose_view_container);
+        mComposeMessageView = view.findViewById(R.id.message_compose_view_container);
         // Bind the compose message view to the DraftMessageData
         mComposeMessageView.bind(DataModel.get().createDraftMessageData(
                 mBinding.getData().getConversationId()), this);
@@ -897,16 +893,12 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
         }
 
         if (cursor != null) {
-            mHost.onConversationMessagesUpdated(cursor.getCount());
-
             // Are we coming from a widget click where we're told to scroll to a particular item?
             final int scrollToPos = getScrollToMessagePosition();
             if (scrollToPos >= 0) {
-                if (LogUtil.isLoggable(LogUtil.BUGLE_TAG, LogUtil.VERBOSE)) {
-                    LogUtil.v(LogUtil.BUGLE_TAG, "onConversationMessagesCursorUpdated " +
-                            " scrollToPos: " + scrollToPos +
-                            " cursorCount: " + cursor.getCount());
-                }
+                LogUtil.v(LogUtil.BUGLE_TAG, "onConversationMessagesCursorUpdated " +
+                        " scrollToPos: " + scrollToPos +
+                        " cursorCount: " + cursor.getCount());
                 scrollToPosition(scrollToPos, true /*smoothScroll*/);
                 clearScrollToMessagePosition();
             }
@@ -1167,8 +1159,6 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
             mHost.invalidateActionBar();
 
             mRecyclerView.setVisibility(View.VISIBLE);
-            mHost.onConversationParticipantDataLoaded
-                (mBinding.getData().getNumberOfParticipantsExcludingSelf());
         }
     }
 
@@ -1266,8 +1256,10 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
         }
     }
 
-    public static class SaveAttachmentTask extends SafeAsyncTask<Void, Void, Void> {
+    public static class SaveAttachmentTask {
         private final Context mContext;
+        private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
+        private final Handler mHandler = new Handler(Looper.getMainLooper());
         private final List<AttachmentToSave> mAttachmentsToSave = new ArrayList<>();
 
         public SaveAttachmentTask(final Context context, final Uri contentUri,
@@ -1288,24 +1280,34 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
             return mAttachmentsToSave.size();
         }
 
-        @Override
-        protected Void doInBackgroundTimed(final Void... arg) {
-            final File appDir = new File(Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_PICTURES),
-                    mContext.getResources().getString(R.string.app_name));
-            final File downloadDir = Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_DOWNLOADS);
+        public void execute() {
+            mExecutor.execute(() -> {
+                onExecute();
+                mHandler.post(this::onPostExecute);
+            });
+        }
+
+        protected void onExecute() {
+            final String appDir = Environment.DIRECTORY_PICTURES
+                    + File.separator
+                    + mContext.getResources().getString(R.string.app_name);
+            final String downloadDir = Environment.DIRECTORY_DOWNLOADS;
+            final ContentResolver resolver = mContext.getContentResolver();
             for (final AttachmentToSave attachment : mAttachmentsToSave) {
                 final boolean isImageOrVideo = ContentType.isImageType(attachment.contentType)
                         || ContentType.isVideoType(attachment.contentType);
-                attachment.persistedUri = UriUtil.persistContent(attachment.uri,
-                        isImageOrVideo ? appDir : downloadDir, attachment.contentType);
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.MediaColumns.MIME_TYPE, attachment.contentType);
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, isImageOrVideo ?
+                        appDir : downloadDir);
+                attachment.persistedUri = resolver.insert(isImageOrVideo
+                        ? MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                        : MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                UriUtil.persistContent(mContext, attachment.uri, attachment.persistedUri);
            }
-            return null;
         }
 
-        @Override
-        protected void onPostExecute(final Void result) {
+        protected void onPostExecute() {
             int failCount = 0;
             int imageCount = 0;
             int videoCount = 0;
@@ -1316,35 +1318,12 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
                    continue;
                 }
 
-                // Inform MediaScanner about the new file
-                final Intent scanFileIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-                scanFileIntent.setData(attachment.persistedUri);
-                mContext.sendBroadcast(scanFileIntent);
-
                 if (ContentType.isImageType(attachment.contentType)) {
                     imageCount++;
                 } else if (ContentType.isVideoType(attachment.contentType)) {
                     videoCount++;
                 } else {
                     otherCount++;
-                    // Inform DownloadManager of the file so it will show in the "downloads" app
-                    final DownloadManager downloadManager =
-                            (DownloadManager) mContext.getSystemService(
-                                    Context.DOWNLOAD_SERVICE);
-                    final String filePath = attachment.persistedUri.getPath();
-                    final File file = new File(filePath);
-
-                    if (file.exists()) {
-                        downloadManager.addCompletedDownload(
-                                file.getName() /* title */,
-                                mContext.getString(
-                                        R.string.attachment_file_description) /* description */,
-                                        true /* isMediaScannerScannable */,
-                                        attachment.contentType,
-                                        file.getAbsolutePath(),
-                                        file.length(),
-                                        false /* showNotification */);
-                    }
                 }
             }
 
@@ -1431,7 +1410,7 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
 
     @Override
     public SimSelectorView getSimSelectorView() {
-        return (SimSelectorView) getView().findViewById(R.id.sim_selector);
+        return getView().findViewById(R.id.sim_selector);
     }
 
     @Override
@@ -1511,8 +1490,7 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
                 actionBar.setCustomView(customView);
             }
 
-            final TextView conversationNameView =
-                    (TextView) customView.findViewById(R.id.conversation_title);
+            final TextView conversationNameView = customView.findViewById(R.id.conversation_title);
             final String conversationName = getConversationName();
             if (!TextUtils.isEmpty(conversationName)) {
                 // RTL : To format conversation title if it happens to be phone numbers.
@@ -1555,11 +1533,6 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
     @Override
     public boolean shouldHideAttachmentsWhenSimSelectorShown() {
         return false;
-    }
-
-    @Override
-    public void showHideSimSelector(final boolean show) {
-        // no-op for now
     }
 
     @Override

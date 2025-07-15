@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project         
- * Copyright (C) 2024 The LineageOS Project
+ * Copyright (C) 2024-2025 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,9 @@ import com.android.messaging.R;
 import com.android.messaging.ui.UIIntents;
 import com.android.messaging.util.LogUtil;
 import com.android.messaging.util.OsUtil;
-import com.android.messaging.util.SafeAsyncTask;
 import com.android.messaging.util.UiUtils;
+
+import java.util.concurrent.Executors;
 
 public class BugleWidgetProvider extends BaseWidgetProvider {
     public static final String ACTION_NOTIFY_CONVERSATIONS_CHANGED =
@@ -43,7 +44,7 @@ public class BugleWidgetProvider extends BaseWidgetProvider {
     @Override
     protected void updateWidget(final Context context, final int appWidgetId) {
         if (OsUtil.hasRequiredPermissions()) {
-            SafeAsyncTask.executeOnThreadPool(() -> rebuildWidget(context, appWidgetId));
+            Executors.newSingleThreadExecutor().execute(() -> rebuildWidget(context, appWidgetId));
         } else {
             AppWidgetManager.getInstance(context).updateAppWidget(appWidgetId,
                     UiUtils.getWidgetMissingPermissionView(context));
@@ -61,9 +62,7 @@ public class BugleWidgetProvider extends BaseWidgetProvider {
     }
 
     public static void rebuildWidget(final Context context, final int appWidgetId) {
-        if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-            LogUtil.v(TAG, "BugleWidgetProvider.rebuildWidget appWidgetId: " + appWidgetId);
-        }
+        LogUtil.v(TAG, "BugleWidgetProvider.rebuildWidget appWidgetId: " + appWidgetId);
         final RemoteViews remoteViews = new RemoteViews(context.getPackageName(),
                 R.layout.widget_conversation_list);
         PendingIntent clickIntent;
@@ -101,9 +100,7 @@ public class BugleWidgetProvider extends BaseWidgetProvider {
      * update and reflect the changes
      */
     public static void notifyConversationListChanged(final Context context) {
-        if (LogUtil.isLoggable(TAG, LogUtil.VERBOSE)) {
-            LogUtil.v(TAG, "notifyConversationListChanged");
-        }
+        LogUtil.v(TAG, "notifyConversationListChanged");
         final Intent intent = new Intent(ACTION_NOTIFY_CONVERSATIONS_CHANGED);
         context.sendBroadcast(intent);
     }

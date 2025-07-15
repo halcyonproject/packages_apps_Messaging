@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
- * Copyright (C) 2024 The LineageOS Project
+ * Copyright (C) 2024-2025 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,16 +33,18 @@ import android.graphics.Shader.TileMode;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.support.v7.mms.pdu.ContentType;
 import android.text.TextUtils;
 
 import androidx.annotation.Nullable;
+import androidx.exifinterface.media.ExifInterface;
 
 import com.android.messaging.Factory;
 import com.android.messaging.datamodel.MediaScratchFileProvider;
 import com.android.messaging.datamodel.MessagingContentProvider;
 import com.android.messaging.datamodel.media.ImageRequest;
 import com.android.messaging.util.Assert.DoesNotRunOnMainThread;
-import com.android.messaging.util.exif.ExifInterface;
+import com.android.messaging.util.exif.ExifInterface.OrientationParams;
 import com.google.common.io.Files;
 
 import java.io.ByteArrayOutputStream;
@@ -52,6 +54,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Locale;
 
 public class ImageUtils {
     private static final String TAG = LogUtil.BUGLE_TAG;
@@ -106,7 +109,6 @@ public class ImageUtils {
                 if (oomCount <= MAX_OOM_COUNT) {
                     Factory.get().reclaimMemory();
                 } else {
-                    done = true;
                     LogUtil.w(TAG, "Failed to convert bitmap to bytes. Out of Memory.");
                 }
                 throw e;
@@ -248,20 +250,17 @@ public class ImageUtils {
         int orientation = androidx.exifinterface.media.ExifInterface.ORIENTATION_UNDEFINED;
         if (inputStream != null) {
             try {
-                final ExifInterface exifInterface = new ExifInterface();
-                exifInterface.readExif(inputStream);
-                final Integer orientationValue =
-                        exifInterface.getTagIntValue(ExifInterface.TAG_ORIENTATION);
-                if (orientationValue != null) {
-                    orientation = orientationValue.intValue();
+                final ExifInterface exifInterface = new ExifInterface(inputStream);
+                final int orientationValue = exifInterface.getAttributeInt(
+                        ExifInterface.TAG_ORIENTATION, -1);
+                if (orientationValue != -1) {
+                    orientation = orientationValue;
                 }
             } catch (IOException e) {
                 // If the image if GIF, PNG, or missing exif header, just use the defaults
             } finally {
                 try {
-                    if (inputStream != null) {
-                        inputStream.close();
-                    }
+                    inputStream.close();
                 } catch (IOException e) {
                     LogUtil.e(TAG, "getOrientation error closing input stream", e);
                 }
@@ -366,7 +365,7 @@ public class ImageUtils {
         private int mWidth;
         private int mHeight;
         // Orientation params of image as read from EXIF data
-        private final ExifInterface.OrientationParams mOrientationParams;
+        private final OrientationParams mOrientationParams;
         // Matrix to undo orientation and scale at the same time
         private final Matrix mMatrix;
         // Size limit as provided by MMS library
@@ -414,7 +413,8 @@ public class ImageUtils {
                 final Context context, final String contentType) {
             mWidth = width;
             mHeight = height;
-            mOrientationParams = ExifInterface.getOrientationParams(orientation);
+            mOrientationParams = com.android.messaging.util.exif.ExifInterface.getOrientationParams(
+                    orientation);
             mMatrix = new Matrix();
             mWidthLimit = widthLimit;
             mHeightLimit = heightLimit;
@@ -577,8 +577,6 @@ public class ImageUtils {
          * @return whether the image can be down subsampled
          */
         private boolean canBeCompressed() {
-            final boolean logv = LogUtil.isLoggable(LogUtil.BUGLE_IMAGE_TAG, LogUtil.VERBOSE);
-
             int imageHeight = mHeight;
             int imageWidth = mWidth;
 
@@ -604,20 +602,18 @@ public class ImageUtils {
                 sampleSize = sampleSize * 2;
                 // Note that recodeImage may try using mSampleSize * 2. Hence we use the factor of 4
                 if (sampleSize >= (Integer.MAX_VALUE / 4)) {
-                    LogUtil.w(LogUtil.BUGLE_IMAGE_TAG, String.format(
+                    LogUtil.w(LogUtil.BUGLE_IMAGE_TAG, String.format(Locale.getDefault(),
                             "Cannot resize image: widthLimit=%d heightLimit=%d byteLimit=%d " +
                             "imageWidth=%d imageHeight=%d", mWidthLimit, mHeightLimit, mByteLimit,
                             mWidth, mHeight));
                     Assert.fail("Image cannot be resized"); // http://b/18926934
                     return false;
                 }
-                if (logv) {
-                    LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
-                            "computeInitialSampleSize: Increasing sampleSize to " + sampleSize
-                            + " as h=" + imageHeight + " vs " + heightLimitWithSlop
-                            + " w=" + imageWidth  + " vs " +  widthLimitWithSlop
-                            + " p=" + imageHeight * imageWidth + " vs " + pixelLimit);
-                }
+                LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
+                        "computeInitialSampleSize: Increasing sampleSize to " + sampleSize
+                        + " as h=" + imageHeight + " vs " + heightLimitWithSlop
+                        + " w=" + imageWidth  + " vs " +  widthLimitWithSlop
+                        + " p=" + imageHeight * imageWidth + " vs " + pixelLimit);
                 imageHeight = mHeight / sampleSize;
                 imageWidth = mWidth / sampleSize;
                 fits = (imageHeight < heightLimitWithSlop &&
@@ -625,13 +621,11 @@ public class ImageUtils {
                         imageHeight * imageWidth < pixelLimit);
             }
 
-            if (logv) {
-                LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
-                        "computeInitialSampleSize: Initial sampleSize " + sampleSize
-                        + " for h=" + imageHeight + " vs " + heightLimitWithSlop
-                        + " w=" + imageWidth  + " vs " +  widthLimitWithSlop
-                        + " p=" + imageHeight * imageWidth + " vs " + pixelLimit);
-            }
+            LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
+                    "computeInitialSampleSize: Initial sampleSize " + sampleSize
+                    + " for h=" + imageHeight + " vs " + heightLimitWithSlop
+                    + " w=" + imageWidth  + " vs " +  widthLimitWithSlop
+                    + " p=" + imageHeight * imageWidth + " vs " + pixelLimit);
 
             mSampleSize = sampleSize;
             return true;
@@ -646,12 +640,9 @@ public class ImageUtils {
             byte[] encoded = null;
             try {
                 final ContentResolver cr = mContext.getContentResolver();
-                final boolean logv = LogUtil.isLoggable(LogUtil.BUGLE_IMAGE_TAG, LogUtil.VERBOSE);
-                if (logv) {
-                    LogUtil.v(LogUtil.BUGLE_IMAGE_TAG, "getResizedImageData: attempt=" + attempt
-                            + " limit (w=" + mWidthLimit + " h=" + mHeightLimit + ") quality="
-                            + mQuality + " scale=" + mScaleFactor + " sampleSize=" + mSampleSize);
-                }
+                LogUtil.v(LogUtil.BUGLE_IMAGE_TAG, "getResizedImageData: attempt=" + attempt
+                        + " limit (w=" + mWidthLimit + " h=" + mHeightLimit + ") quality="
+                        + mQuality + " scale=" + mScaleFactor + " sampleSize=" + mSampleSize);
                 if (mScaled == null) {
                     if (mDecoded == null) {
                         mOptions.inSampleSize = mSampleSize;
@@ -661,17 +652,13 @@ public class ImageUtils {
                             // Ignore
                         }
                         if (mDecoded == null) {
-                            if (logv) {
-                                LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
-                                        "getResizedImageData: got empty decoded bitmap");
-                            }
+                            LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
+                                    "getResizedImageData: got empty decoded bitmap");
                             return null;
                         }
                     }
-                    if (logv) {
-                        LogUtil.v(LogUtil.BUGLE_IMAGE_TAG, "getResizedImageData: decoded w,h="
-                                + mDecoded.getWidth() + "," + mDecoded.getHeight());
-                    }
+                    LogUtil.v(LogUtil.BUGLE_IMAGE_TAG, "getResizedImageData: decoded w,h="
+                            + mDecoded.getWidth() + "," + mDecoded.getHeight());
                     // Make sure to scale the decoded image if dimension is not within limit
                     final int decodedWidth = mDecoded.getWidth();
                     final int decodedHeight = mDecoded.getHeight();
@@ -693,23 +680,19 @@ public class ImageUtils {
                         mScaled = Bitmap.createBitmap(mDecoded, 0, 0, decodedWidth, decodedHeight,
                                 mMatrix, false /* filter */);
                         if (mScaled == null) {
-                            if (logv) {
-                                LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
-                                        "getResizedImageData: got empty scaled bitmap");
-                            }
+                            LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
+                                    "getResizedImageData: got empty scaled bitmap");
                             return null;
                         }
-                        if (logv) {
-                            LogUtil.v(LogUtil.BUGLE_IMAGE_TAG, "getResizedImageData: scaled w,h="
-                                    + mScaled.getWidth() + "," + mScaled.getHeight());
-                        }
+                        LogUtil.v(LogUtil.BUGLE_IMAGE_TAG, "getResizedImageData: scaled w,h="
+                                + mScaled.getWidth() + "," + mScaled.getHeight());
                     } else {
                         mScaled = mDecoded;
                     }
                 }
                 // Now encode it at current quality
                 encoded = ImageUtils.bitmapToBytes(mScaled, mQuality);
-                if (encoded != null && logv) {
+                if (encoded != null) {
                     LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
                             "getResizedImageData: Encoded down to " + encoded.length + "@"
                                     + mScaled.getWidth() + "/" + mScaled.getHeight() + "~"
@@ -729,7 +712,6 @@ public class ImageUtils {
          * @param currentSize encoded image size (will be 0 if OOM)
          */
         private void updateRecodeParameters(final int currentSize) {
-            final boolean logv = LogUtil.isLoggable(LogUtil.BUGLE_IMAGE_TAG, LogUtil.VERBOSE);
             // Only return data within the limit
             if (currentSize > 0 &&
                     mQuality > MINIMUM_IMAGE_COMPRESSION_QUALITY) {
@@ -738,10 +720,8 @@ public class ImageUtils {
                 mQuality = Math.max(MINIMUM_IMAGE_COMPRESSION_QUALITY,
                         Math.min((int) (mQuality * Math.sqrt((1.0 * mByteLimit) / currentSize)),
                                 (int) (mQuality * QUALITY_SCALE_DOWN_RATIO)));
-                if (logv) {
-                    LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
-                            "getResizedImageData: Retrying at quality " + mQuality);
-                }
+                LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
+                        "getResizedImageData: Retrying at quality " + mQuality);
             } else if (currentSize > 0 &&
                     mScaleFactor < 2.0 * MIN_SCALE_DOWN_RATIO * MIN_SCALE_DOWN_RATIO) {
                 // JPEG compression failed to hit target size - need smaller image
@@ -751,10 +731,8 @@ public class ImageUtils {
                 //       2.0 / MIN_SCALE_DOWN_RATIO (arbitrary limit)
                 mQuality = IMAGE_COMPRESSION_QUALITY;
                 mScaleFactor = mScaleFactor / MIN_SCALE_DOWN_RATIO;
-                if (logv) {
-                    LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
-                            "getResizedImageData: Retrying at scale " + mScaleFactor);
-                }
+                LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
+                        "getResizedImageData: Retrying at scale " + mScaleFactor);
                 // Release scaled bitmap to trigger rescaling
                 if (mScaled != null && mScaled != mDecoded) {
                     mScaled.recycle();
@@ -764,19 +742,15 @@ public class ImageUtils {
                 // Then before we subsample try cleaning up our cached memory
                 Factory.get().reclaimMemory();
                 mHasReclaimedMemory = true;
-                if (logv) {
-                    LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
-                            "getResizedImageData: Retrying after reclaiming memory ");
-                }
+                LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
+                        "getResizedImageData: Retrying after reclaiming memory ");
             } else {
                 // Last resort - subsample image by another factor of 2 and try again
                 mSampleSize = mSampleSize * 2;
                 mQuality = IMAGE_COMPRESSION_QUALITY;
                 mScaleFactor = 1.0f;
-                if (logv) {
-                    LogUtil.v(LogUtil.BUGLE_IMAGE_TAG,
-                            "getResizedImageData: Retrying at sampleSize " + mSampleSize);
-                }
+                LogUtil.v(LogUtil.BUGLE_IMAGE_TAG, "getResizedImageData: Retrying at sampleSize "
+                        + mSampleSize);
                 // Release all bitmaps to trigger subsampling
                 if (mScaled != null && mScaled != mDecoded) {
                     mScaled.recycle();

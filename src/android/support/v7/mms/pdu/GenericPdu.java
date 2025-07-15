@@ -22,7 +22,7 @@ public class GenericPdu {
     /**
      * The headers of pdu.
      */
-    PduHeaders mPduHeaders = null;
+    PduHeaders mPduHeaders;
 
     /**
      * Constructor.
@@ -45,7 +45,7 @@ public class GenericPdu {
      *
      * @return A PduHeaders of this PDU.
      */
-    PduHeaders getPduHeaders() {
+    public PduHeaders getPduHeaders() {
         return mPduHeaders;
     }
 
@@ -97,7 +97,7 @@ public class GenericPdu {
      * @return the value
      */
     public EncodedStringValue getFrom() {
-       return mPduHeaders.getEncodedStringValue(PduHeaders.FROM);
+        return mPduHeaders.getEncodedStringValue(PduHeaders.FROM);
     }
 
     /**
