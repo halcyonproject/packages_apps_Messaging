@@ -18,12 +18,15 @@
 package com.android.messaging.ui.conversation;
 
 import android.content.Intent;
+import android.util.TypedValue;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.mms.pdu.ContentType;
 import android.text.TextUtils;
 import android.view.MenuItem;
+import androidx.appcompat.widget.Toolbar;
+import com.google.android.material.appbar.CollapsingToolbarLayout;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
@@ -51,6 +54,7 @@ public class ConversationActivity extends BugleActionBarActivity
     private static final String SAVED_INSTANCE_STATE_UI_STATE_KEY = "uistate";
 
     private ConversationActivityUiState mUiState;
+    private CollapsingToolbarLayout mCollapsingToolbarLayout;
 
     // Fragment transactions cannot be performed after onSaveInstanceState() has been called since
     // it will cause state loss. We don't want to call commitAllowingStateLoss() since it's
@@ -67,7 +71,25 @@ public class ConversationActivity extends BugleActionBarActivity
 
         setContentView(R.layout.conversation_activity);
 
+        final Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+        mCollapsingToolbarLayout = findViewById(R.id.collapsing_toolbar_layout);
+        if (mCollapsingToolbarLayout != null) {
+            final int windowBg = getResources().getColor(R.color.window_background);
+            final int titleColor = getResources().getColor(R.color.collapsing_toolbar_title_color);
+            mCollapsingToolbarLayout.setContentScrimColor(windowBg);
+            mCollapsingToolbarLayout.setStatusBarScrimColor(windowBg);
+            mCollapsingToolbarLayout.setBackgroundColor(windowBg);
+            mCollapsingToolbarLayout.setExpandedTitleColor(titleColor);
+            mCollapsingToolbarLayout.setCollapsedTitleTextColor(titleColor);
+        }
+
         final Intent intent = getIntent();
+        getWindow().setStatusBarColor(getResources().getColor(R.color.window_background));
 
         // Do our best to restore UI state from saved instance state.
         if (savedInstanceState != null) {
@@ -196,6 +218,10 @@ public class ConversationActivity extends BugleActionBarActivity
             contactPicker.updateActionBar(actionBar);
         } else if (conversation != null && mUiState.shouldShowConversationFragment()) {
             conversation.updateActionBar(actionBar);
+        }
+
+        if (mCollapsingToolbarLayout != null && actionBar != null) {
+            mCollapsingToolbarLayout.setTitle(actionBar.getTitle());
         }
     }
 

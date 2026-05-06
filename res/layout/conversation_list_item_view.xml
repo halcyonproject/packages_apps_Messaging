@@ -64,9 +64,11 @@
             android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?android:attr/selectableItemBackground"
+            android:background="@drawable/conversation_list_item_background"
             android:clipToPadding="false"
             android:duplicateParentState="true"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginVertical="4dp"
             android:padding="@dimen/conversation_list_item_view_padding"
             android:baselineAligned="false">
 

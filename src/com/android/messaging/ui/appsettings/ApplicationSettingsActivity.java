@@ -50,8 +50,20 @@ public class ApplicationSettingsActivity extends BugleActionBarActivity {
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.settings_activity_modern);
 
+        final com.google.android.material.appbar.MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        final com.google.android.material.appbar.CollapsingToolbarLayout collapsingToolbar =
+                findViewById(R.id.collapsing_toolbar_layout);
+        if (collapsingToolbar != null) {
+            final int titleColor = getResources().getColor(R.color.collapsing_toolbar_title_color);
+            collapsingToolbar.setExpandedTitleColor(titleColor);
+            collapsingToolbar.setCollapsedTitleTextColor(titleColor);
+        }
+
         final boolean topLevel = getIntent().getBooleanExtra(
                 UIIntents.UI_INTENT_EXTRA_TOP_LEVEL_SETTINGS, false);
         if (topLevel) {
@@ -59,7 +71,7 @@ public class ApplicationSettingsActivity extends BugleActionBarActivity {
         }
 
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-        ft.replace(android.R.id.content, new ApplicationSettingsFragment());
+        ft.replace(R.id.settings_fragment_container, new ApplicationSettingsFragment());
         ft.commit();
     }
 

@@ -261,7 +261,9 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
                     }
                 }
                 if (mWasScrolledToBottom != isScrolledToBottom()) {
-                    mConversationComposeDivider.animate().alpha(isScrolledToBottom() ? 0 : 1);
+                    if (mConversationComposeDivider != null) {
+                        mConversationComposeDivider.animate().alpha(isScrolledToBottom() ? 0 : 1);
+                    }
                     mWasScrolledToBottom = isScrolledToBottom();
                 }
             }
@@ -595,14 +597,14 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
                     Parcelable.class);
         }
 
-        mConversationComposeDivider = view.findViewById(R.id.conversation_compose_divider);
+        // mConversationComposeDivider = view.findViewById(R.id.conversation_compose_divider);
         mScrollToDismissThreshold = ViewConfiguration.get(getActivity()).getScaledTouchSlop();
         mRecyclerView.addOnScrollListener(mListScrollListener);
         mFastScroller = ConversationFastScroller.addTo(mRecyclerView,
                 UiUtils.isRtlMode() ? ConversationFastScroller.POSITION_LEFT_SIDE :
                     ConversationFastScroller.POSITION_RIGHT_SIDE);
 
-        mComposeMessageView = view.findViewById(R.id.message_compose_view_container);
+        mComposeMessageView = getActivity().findViewById(R.id.message_compose_view_container);
         // Bind the compose message view to the DraftMessageData
         mComposeMessageView.bind(DataModel.get().createDraftMessageData(
                 mBinding.getData().getConversationId()), this);
@@ -1467,9 +1469,9 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
     }
 
     private void updateActionAndStatusBarColor(final ActionBar actionBar) {
-        final int themeColor = ConversationDrawables.get().getConversationThemeColor();
-        actionBar.setBackgroundDrawable(new ColorDrawable(themeColor));
-        UiUtils.setStatusBarColor(getActivity(), themeColor);
+        // final int themeColor = ConversationDrawables.get().getConversationThemeColor();
+        // actionBar.setBackgroundDrawable(new ColorDrawable(themeColor));
+        // UiUtils.setStatusBarColor(getActivity(), themeColor);
     }
 
     public void updateActionBar(final ActionBar actionBar) {
@@ -1477,51 +1479,19 @@ public class ConversationFragment extends Fragment implements ConversationDataLi
             updateActionAndStatusBarColor(actionBar);
             // We update this regardless of whether or not the action bar is showing so that we
             // don't get a race when it reappears.
-            actionBar.setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
+            actionBar.setDisplayOptions(ActionBar.DISPLAY_SHOW_TITLE | ActionBar.DISPLAY_HOME_AS_UP);
             actionBar.setDisplayHomeAsUpEnabled(true);
             // Reset the back arrow to its default
             actionBar.setHomeAsUpIndicator(0);
-            View customView = actionBar.getCustomView();
-            if (customView == null || customView.getId() != R.id.conversation_title_container) {
-                final LayoutInflater inflator = (LayoutInflater)
-                        getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                customView = inflator.inflate(R.layout.action_bar_conversation_name, null);
-                customView.setOnClickListener(v -> onBackPressed());
-                actionBar.setCustomView(customView);
-            }
+            actionBar.setTitle(getConversationName());
+        }
 
-            final TextView conversationNameView = customView.findViewById(R.id.conversation_title);
-            final String conversationName = getConversationName();
-            if (!TextUtils.isEmpty(conversationName)) {
-                // RTL : To format conversation title if it happens to be phone numbers.
-                final BidiFormatter bidiFormatter = BidiFormatter.getInstance();
-                final String formattedName = bidiFormatter.unicodeWrap(
-                        UiUtils.commaEllipsize(
-                                conversationName,
-                                conversationNameView.getPaint(),
-                                conversationNameView.getWidth(),
-                                getString(R.string.plus_one),
-                                getString(R.string.plus_n)).toString(),
-                        TextDirectionHeuristicsCompat.LTR);
-                conversationNameView.setText(formattedName);
-                // In case phone numbers are mixed in the conversation name, we need to vocalize it.
-                final String vocalizedConversationName =
-                        AccessibilityUtil.getVocalizedPhoneNumber(getResources(), conversationName);
-                conversationNameView.setContentDescription(vocalizedConversationName);
-                getActivity().setTitle(conversationName);
-            } else {
-                final String appName = getString(R.string.app_name);
-                conversationNameView.setText(appName);
-                getActivity().setTitle(appName);
-            }
-
-            // When conversation is showing and media picker is not showing, then hide the action
-            // bar only when we are in landscape mode, with IME open.
-            if (mHost.isImeOpen() && UiUtils.isLandscapeMode()) {
-                actionBar.hide();
-            } else {
-                actionBar.show();
-            }
+        // When conversation is showing and media picker is not showing, then hide the action
+        // bar only when we are in landscape mode, with IME open.
+        if (mHost.isImeOpen() && UiUtils.isLandscapeMode()) {
+            actionBar.hide();
+        } else {
+            actionBar.show();
         }
     }
 

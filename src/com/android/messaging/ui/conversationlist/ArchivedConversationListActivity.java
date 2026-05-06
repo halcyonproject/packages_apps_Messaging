@@ -21,6 +21,8 @@ import android.os.Bundle;
 import android.view.MenuItem;
 
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.widget.Toolbar;
+import com.google.android.material.appbar.CollapsingToolbarLayout;
 
 import com.android.messaging.R;
 
@@ -29,23 +31,30 @@ public class ArchivedConversationListActivity extends AbstractConversationListAc
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.conversation_list_activity);
+
+        final Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
         mConversationListFragment =
                 ConversationListFragment.createArchivedConversationListFragment();
         getSupportFragmentManager()
                 .beginTransaction()
-                .add(android.R.id.content, mConversationListFragment)
+                .add(R.id.fragment_container, mConversationListFragment)
                 .commit();
         invalidateActionBar();
     }
 
+    @Override
     protected void updateActionBar(ActionBar actionBar) {
-        actionBar.setTitle(getString(R.string.archived_activity_title));
-        actionBar.setDisplayShowTitleEnabled(true);
+        final CollapsingToolbarLayout collapsingToolbar = findViewById(R.id.collapsing_toolbar_layout);
+        if (collapsingToolbar != null) {
+            collapsingToolbar.setTitle(getString(R.string.archived_activity_title));
+        } else {
+            actionBar.setTitle(getString(R.string.archived_activity_title));
+        }
+        actionBar.setDisplayShowTitleEnabled(collapsingToolbar == null);
         actionBar.setDisplayHomeAsUpEnabled(true);
-        actionBar.setBackgroundDrawable(new ColorDrawable(
-                getResources().getColor(
-                        R.color.archived_conversation_action_bar_background_color_dark)));
         actionBar.show();
         super.updateActionBar(actionBar);
     }

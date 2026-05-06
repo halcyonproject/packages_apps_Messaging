@@ -164,17 +164,18 @@ public class ConversationMessageView extends FrameLayout implements View.OnClick
                 .getDimensionPixelSize(R.dimen.conversation_message_contact_icon_size);
 
         final int unspecifiedMeasureSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
-        final int iconMeasureSpec = MeasureSpec.makeMeasureSpec(iconSize, MeasureSpec.EXACTLY);
+        final int iconMeasureSpec = mContactIconView.getVisibility() == GONE ?
+                MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY) :
+                MeasureSpec.makeMeasureSpec(iconSize, MeasureSpec.EXACTLY);
 
         mContactIconView.measure(iconMeasureSpec, iconMeasureSpec);
 
-        final int arrowWidth =
-                getResources().getDimensionPixelSize(R.dimen.message_bubble_arrow_width);
+        final int arrowWidth = 0;
 
-        // We need to subtract contact icon width twice from the horizontal space to get
-        // the max leftover space because we want the message bubble to extend no further than the
-        // starting position of the message bubble in the opposite direction.
-        final int maxLeftoverSpace = horizontalSpace - mContactIconView.getMeasuredWidth() * 2
+        // We no longer need to subtract contact icon width twice if it's hidden.
+        final int iconWidth = mContactIconView.getMeasuredWidth();
+        final int reservedSpace = iconWidth > 0 ? iconWidth * 2 : 0;
+        final int maxLeftoverSpace = horizontalSpace - reservedSpace
                 - arrowWidth - getPaddingStart() - getPaddingEnd();
         final int messageContentWidthMeasureSpec = MeasureSpec.makeMeasureSpec(maxLeftoverSpace,
                 MeasureSpec.AT_MOST);
@@ -458,19 +459,8 @@ public class ConversationMessageView extends FrameLayout implements View.OnClick
         mMessageTextAndInfoView.setVisibility(
                 messageTextAndOrInfoVisible ? View.VISIBLE : View.GONE);
 
-        if (shouldShowSimplifiedVisualStyle()) {
-            mContactIconView.setVisibility(View.GONE);
-            mContactIconView.setImageResourceUri(null);
-        } else {
-            mContactIconView.setVisibility(View.VISIBLE);
-            final Uri avatarUri = AvatarUriUtil.createAvatarUri(
-                    mData.getSenderProfilePhotoUri(),
-                    mData.getSenderFullName(),
-                    mData.getSenderNormalizedDestination(),
-                    mData.getSenderContactLookupKey());
-            mContactIconView.setImageResourceUri(avatarUri, mData.getSenderContactId(),
-                    mData.getSenderContactLookupKey(), mData.getSenderNormalizedDestination());
-        }
+        mContactIconView.setVisibility(View.GONE);
+        mContactIconView.setImageResourceUri(null);
     }
 
     private void updateMessageContent() {
@@ -661,7 +651,7 @@ public class ConversationMessageView extends FrameLayout implements View.OnClick
                 res.getDimensionPixelSize(R.dimen.message_padding_same_author);
         final int messageTopPaddingDefault =
                 res.getDimensionPixelSize(R.dimen.message_padding_default);
-        final int arrowWidth = res.getDimensionPixelOffset(R.dimen.message_bubble_arrow_width);
+        final int arrowWidth = 0;
         final int messageTextMinHeightDefault = res.getDimensionPixelSize(
                 R.dimen.conversation_message_contact_icon_size);
         final int messageTextLeftRightPadding = res.getDimensionPixelOffset(

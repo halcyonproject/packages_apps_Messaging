@@ -19,6 +19,13 @@
     <color name="lineage_accent">@android:color/system_accent1_600</color>
 
     <color name="window_background">@android:color/system_neutral1_50</color>
+    <color name="conversation_list_item_card_background">@android:color/system_neutral1_100</color>
+    <color name="conversation_list_item_read">@android:color/system_neutral1_700</color>
+    <color name="conversation_list_item_unread">@android:color/system_neutral1_900</color>
+    <color name="conversation_list_item_name_read">@android:color/system_neutral1_700</color>
+    <color name="conversation_list_item_name_unread">@android:color/system_neutral1_900</color>
+    <color name="conversation_list_item_snippet_read">@android:color/system_neutral1_500</color>
+    <color name="conversation_list_item_snippet_unread">@android:color/system_neutral1_600</color>
 
     <color name="navigation_bar_bg">@color/window_background</color>
 
@@ -27,4 +34,15 @@
     <color name="fab_fg_color">@android:color/white</color>
 
     <color name="attachment_bg_color">@android:color/system_neutral1_0</color>
+    <color name="message_text_color_incoming">@android:color/system_neutral1_900</color>
+    <color name="message_text_color_outgoing">@android:color/system_neutral1_900</color>
+    <color name="message_bubble_color_outgoing">@color/conversation_list_item_card_background</color>
+    <color name="message_bubble_color_incoming">@color/conversation_list_item_card_background</color>
+    <color name="message_error_bubble_color_incoming">@color/conversation_list_item_card_background</color>
+    <color name="message_bubble_color_selected">@android:color/system_accent3_200</color>
+    <color name="compose_message_send_color">@android:color/system_accent1_600</color>
+    <color name="collapsing_toolbar_title_color">@android:color/system_neutral1_900</color>
+    <color name="action_bar_background_color">@color/window_background</color>
+    <color name="action_bar_background_color_dark">@color/window_background</color>
+    <color name="contextual_action_bar_background_color">@color/window_background</color>
 </resources>

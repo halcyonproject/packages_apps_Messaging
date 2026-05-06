@@ -23,6 +23,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.widget.Toolbar;
+import com.google.android.material.appbar.CollapsingToolbarLayout;
 import androidx.appcompat.app.ActionBar;
 
 import com.android.messaging.R;
@@ -36,10 +38,15 @@ public class ConversationListActivity extends AbstractConversationListActivity {
         Trace.beginSection("ConversationListActivity.onCreate");
         setTheme(R.style.BugleTheme_ConversationListActivity);
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.conversation_list_activity);
+
+        final Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
         mConversationListFragment = ConversationListFragment.createConversationListFragment(null);
         getSupportFragmentManager()
                 .beginTransaction()
-                .add(android.R.id.content, mConversationListFragment)
+                .add(R.id.fragment_container, mConversationListFragment)
                 .commit();
         Trace.endSection();
         invalidateActionBar();
@@ -47,12 +54,14 @@ public class ConversationListActivity extends AbstractConversationListActivity {
 
     @Override
     protected void updateActionBar(final ActionBar actionBar) {
-        actionBar.setTitle(getString(R.string.app_name));
-        actionBar.setDisplayShowTitleEnabled(true);
+        final CollapsingToolbarLayout collapsingToolbar = findViewById(R.id.collapsing_toolbar_layout);
+        if (collapsingToolbar != null) {
+            collapsingToolbar.setTitle(getString(R.string.app_name));
+        } else {
+            actionBar.setTitle(getString(R.string.app_name));
+        }
+        actionBar.setDisplayShowTitleEnabled(collapsingToolbar == null);
         actionBar.setDisplayHomeAsUpEnabled(false);
-        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
-        actionBar.setBackgroundDrawable(new ColorDrawable(
-                getResources().getColor(R.color.action_bar_background_color)));
         actionBar.show();
         super.updateActionBar(actionBar);
     }

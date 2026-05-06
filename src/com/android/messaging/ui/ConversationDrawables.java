@@ -49,6 +49,7 @@ public class ConversationDrawables {
     private Drawable mFastScrollPreviewDrawableRight;
     private final Context mContext;
     private int mOutgoingBubbleColor;
+    private int mIncomingBubbleColor;
     private int mIncomingErrorBubbleColor;
     private int mIncomingAudioButtonColor;
     private int mSelectedBubbleColor;
@@ -99,6 +100,7 @@ public class ConversationDrawables {
         mFastScrollPreviewDrawableRight = ResourcesCompat.getDrawable(resources,
                 R.drawable.fastscroll_preview_right, theme);
         mOutgoingBubbleColor = resources.getColor(R.color.message_bubble_color_outgoing, theme);
+        mIncomingBubbleColor = resources.getColor(R.color.message_bubble_color_incoming, theme);
         mIncomingErrorBubbleColor =
                 resources.getColor(R.color.message_error_bubble_color_incoming, theme);
         mIncomingAudioButtonColor =
@@ -124,13 +126,7 @@ public class ConversationDrawables {
             if (isError) {
                 color = mIncomingErrorBubbleColor;
             } else {
-                if (identifier != null &&
-                        mContext.getResources().getBoolean(R.bool.contact_colors)) {
-                    int idcolor = Math.abs(identifier.hashCode()) % mColors.length();
-                    color = mColors.getColor(idcolor, mThemeColor);
-                } else {
-                    color = mThemeColor;
-                }
+                color = mIncomingBubbleColor;
             }
         } else {
             color = mOutgoingBubbleColor;

@@ -71,8 +71,7 @@ public class BugleActionBarActivity extends AppCompatActivity implements ImeUtil
         mLastScreenHeight = getResources().getDisplayMetrics().heightPixels;
         LogUtil.v(LogUtil.BUGLE_TAG, this.getLocalClassName() + ".onCreate");
 
-        getWindow().setStatusBarColor(getResources().getColor(R.color.action_bar_background_color,
-                getTheme()));
+        // Status bar color is now handled via themes
     }
 
     @Override

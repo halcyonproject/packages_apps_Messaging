@@ -74,6 +74,10 @@ public class ConversationListItemView extends FrameLayout implements OnClickList
     static final int NO_UNREAD_SNIPPET_LINE_COUNT = 1;
     private int mListItemReadColor;
     private int mListItemUnreadColor;
+    private int mListItemReadNameColor;
+    private int mListItemUnreadNameColor;
+    private int mListItemReadSnippetColor;
+    private int mListItemUnreadSnippetColor;
     private Typeface mListItemReadTypeface;
     private Typeface mListItemUnreadTypeface;
     private static String sPlusOneString;
@@ -166,6 +170,10 @@ public class ConversationListItemView extends FrameLayout implements OnClickList
         final Resources.Theme theme = getContext().getTheme();
         mListItemReadColor = resources.getColor(R.color.conversation_list_item_read, theme);
         mListItemUnreadColor = resources.getColor(R.color.conversation_list_item_unread, theme);
+        mListItemReadNameColor = resources.getColor(R.color.conversation_list_item_name_read, theme);
+        mListItemUnreadNameColor = resources.getColor(R.color.conversation_list_item_name_unread, theme);
+        mListItemReadSnippetColor = resources.getColor(R.color.conversation_list_item_snippet_read, theme);
+        mListItemUnreadSnippetColor = resources.getColor(R.color.conversation_list_item_snippet_unread, theme);
 
         mListItemReadTypeface = Typefaces.getRobotoNormal();
         mListItemUnreadTypeface = Typefaces.getRobotoBold();
@@ -192,10 +200,10 @@ public class ConversationListItemView extends FrameLayout implements OnClickList
 
     private void setConversationName() {
         if (mData.getIsRead() || mData.getShowDraft()) {
-            mConversationNameView.setTextColor(mListItemReadColor);
+            mConversationNameView.setTextColor(mListItemReadNameColor);
             mConversationNameView.setTypeface(mListItemReadTypeface);
         } else {
-            mConversationNameView.setTextColor(mListItemUnreadColor);
+            mConversationNameView.setTextColor(mListItemUnreadNameColor);
             mConversationNameView.setTypeface(mListItemUnreadTypeface);
         }
 
@@ -381,11 +389,11 @@ public class ConversationListItemView extends FrameLayout implements OnClickList
 
         if (mData.getIsRead() || mData.getShowDraft()) {
             maxLines = TextUtils.isEmpty(snippetText) ? 0 : NO_UNREAD_SNIPPET_LINE_COUNT;
-            color = mListItemReadColor;
+            color = mListItemReadSnippetColor;
             typeface = mListItemReadTypeface;
         } else {
             maxLines = TextUtils.isEmpty(snippetText) ? 0 : UNREAD_SNIPPET_LINE_COUNT;
-            color = mListItemUnreadColor;
+            color = mListItemUnreadSnippetColor;
             typeface = mListItemUnreadTypeface;
         }
 
@@ -420,12 +428,12 @@ public class ConversationListItemView extends FrameLayout implements OnClickList
                 // row is left with a latest_message_id of a no longer existing message and
                 // therefore the join values come back as null (or in this case zero).
                 || mData.getMessageStatus() == MessageData.BUGLE_STATUS_UNKNOWN) {
-            mTimestampTextView.setTextColor(mListItemReadColor);
+            mTimestampTextView.setTextColor(mListItemReadSnippetColor);
             mTimestampTextView.setTypeface(mListItemReadTypeface, typefaceStyle);
             mTimestampTextView.setText(resources.getString(
                     R.string.conversation_list_item_view_draft_message));
          } else {
-            mTimestampTextView.setTextColor(mListItemReadColor);
+            mTimestampTextView.setTextColor(mListItemReadSnippetColor);
             mTimestampTextView.setTypeface(mListItemReadTypeface, typefaceStyle);
             final String formattedTimestamp = mData.getFormattedTimestamp();
             if (mData.getIsSendRequested()) {

@@ -15,7 +15,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<FrameLayout
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -25,7 +25,7 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@android:id/list"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:paddingTop="@dimen/conversation_list_first_item_extra_padding"
         android:clipToPadding="false"
         android:listSelector="?android:attr/listSelector"
@@ -37,19 +37,4 @@
         android:visibility="gone"
         android:layout_marginBottom="@dimen/conversation_list_empty_text_bottom_margin" />
 
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay"
-        android:id="@+id/start_new_conversation_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:text="@string/start_chat"
-        android:forceDarkAllowed="false"
-        android:textColor="@color/fab_fg_color"
-        app:backgroundTint="@color/fab_color"
-        app:icon="@drawable/ic_message"
-        app:iconTint="@color/fab_fg_color"
-        app:layout_behavior="com.google.android.material.behavior.HideBottomViewOnScrollBehavior" />
-
-</FrameLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -219,7 +219,7 @@ public class ConversationListFragment extends Fragment implements ConversationLi
                     Parcelable.class);
         }
 
-        mStartNewConversationButton = rootView.findViewById(R.id.start_new_conversation_button);
+        mStartNewConversationButton = requireActivity().findViewById(R.id.start_new_conversation_button);
         if (mArchiveMode || mForwardMessageMode) {
             mStartNewConversationButton.setVisibility(View.GONE);
         } else {
